@@ -1,6 +1,8 @@
 import SwiftUI
 
-struct InputView: View {
+/// Step 1 of 3 — the proposed message. Judgment does not happen here;
+/// NEXT only advances to the goal step.
+struct MessageStepView: View {
     @Bindable var viewModel: JudgeViewModel
     @FocusState private var isEditorFocused: Bool
 
@@ -16,8 +18,11 @@ struct InputView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
 
+            Text("What are you thinking about sending?")
+                .font(.headline)
+
             ZStack(alignment: .topLeading) {
-                TextEditor(text: $viewModel.inputText)
+                TextEditor(text: $viewModel.proposedMessage)
                     .focused($isEditorFocused)
                     .font(.body)
                     .scrollContentBackground(.hidden)
@@ -28,9 +33,8 @@ struct InputView: View {
                     )
                     .accessibilityLabel("Message to judge")
                     .accessibilityHint("Paste or type the text you're considering sending.")
-                    .disabled(viewModel.isJudging)
 
-                if viewModel.inputText.isEmpty {
+                if viewModel.proposedMessage.isEmpty {
                     Text("Paste what you're about to send...")
                         .font(.body)
                         .foregroundStyle(.tertiary)
@@ -42,10 +46,10 @@ struct InputView: View {
             }
             .frame(minHeight: 180)
 
-            if !viewModel.inputText.isEmpty {
+            if !viewModel.proposedMessage.isEmpty {
                 Button(role: .destructive) {
                     Haptics.tap()
-                    viewModel.inputText = ""
+                    viewModel.proposedMessage = ""
                 } label: {
                     Label("Clear", systemImage: "xmark.circle")
                 }
@@ -56,7 +60,21 @@ struct InputView: View {
 
             Spacer(minLength: 0)
 
-            judgeButton
+            Button {
+                isEditorFocused = false
+                Haptics.tap()
+                viewModel.proceedToGoal()
+            } label: {
+                Text("NEXT")
+                    .fontWeight(.bold)
+                    .frame(maxWidth: .infinity)
+                    .frame(minHeight: Theme.minimumTapTarget)
+            }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
+            .disabled(!viewModel.isMessageValid)
+            .accessibilityLabel("Next")
+            .accessibilityHint(viewModel.isMessageValid ? "" : "Enter a message first")
         }
         .padding(20)
         .toolbar {
@@ -67,34 +85,8 @@ struct InputView: View {
         }
         .scrollDismissesKeyboard(.interactively)
     }
-
-    @ViewBuilder
-    private var judgeButton: some View {
-        Button {
-            isEditorFocused = false
-            Task { await viewModel.judge() }
-        } label: {
-            HStack {
-                if viewModel.isJudging {
-                    ProgressView()
-                        .tint(.white)
-                    Text("Reading the room…")
-                } else {
-                    Text("JUDGE MY TEXT")
-                        .fontWeight(.bold)
-                }
-            }
-            .frame(maxWidth: .infinity)
-            .frame(minHeight: Theme.minimumTapTarget)
-        }
-        .buttonStyle(.borderedProminent)
-        .controlSize(.large)
-        .disabled(!viewModel.isInputValid || viewModel.isJudging)
-        .accessibilityLabel(viewModel.isJudging ? "Judging your text" : "Judge my text")
-        .accessibilityHint(viewModel.isInputValid ? "" : "Enter a message first")
-    }
 }
 
 #Preview {
-    InputView(viewModel: JudgeViewModel())
+    MessageStepView(viewModel: JudgeViewModel())
 }

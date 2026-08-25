@@ -2,6 +2,7 @@ import SwiftUI
 
 struct VerdictView: View {
     let viewModel: JudgeViewModel
+    let request: JudgmentRequest
     let result: JudgmentResult
 
     private var shareText: String {
@@ -9,8 +10,13 @@ struct VerdictView: View {
     }
 
     var body: some View {
-        VStack(spacing: 24) {
-            Spacer(minLength: 8)
+        VStack(spacing: 20) {
+            Text("Goal: \(request.goal.title)")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .center)
+
+            Spacer(minLength: 4)
 
             VStack(spacing: 12) {
                 Image(systemName: result.verdict.symbolName)
@@ -31,7 +37,7 @@ struct VerdictView: View {
                 .foregroundStyle(.primary)
                 .padding(.horizontal, 8)
 
-            Spacer(minLength: 8)
+            Spacer(minLength: 4)
 
             VStack(spacing: 12) {
                 if !result.isSafetyRouted {
@@ -46,7 +52,7 @@ struct VerdictView: View {
                     }
                     .buttonStyle(.borderedProminent)
                     .controlSize(.large)
-                    .accessibilityHint("Choose what you're trying to do and get rewrite options")
+                    .accessibilityHint("Get rewrite options for \(request.goal.title.lowercased())")
                 }
 
                 Button {
@@ -66,7 +72,7 @@ struct VerdictView: View {
                             .frame(minHeight: Theme.minimumTapTarget)
                     }
                     .accessibilityLabel("Share result")
-                    .accessibilityHint("Shares only the verdict, not your original message")
+                    .accessibilityHint("Shares only the verdict, not your original message or context")
                 }
             }
         }
@@ -80,9 +86,19 @@ struct VerdictView: View {
 #Preview {
     VerdictView(
         viewModel: JudgeViewModel(),
+        request: JudgmentRequest(
+            proposedMessage: "Hey stranger lol",
+            goal: .getClarity,
+            context: .quick(QuickContext(
+                whoTextedLast: .me,
+                timeSinceLastMessage: .oneToThreeDays,
+                didHeRespond: .no,
+                additionalNotes: ""
+            ))
+        ),
         result: JudgmentResult(
-            verdict: .rewrite,
-            reason: "This reads a little anxious — say less and let it breathe.",
+            verdict: .dontSend,
+            reason: "You already asked a direct question and haven't gotten an answer. Another casual check-in probably won't get you the clarity you're looking for.",
             riskFlags: [],
             isSafetyRouted: false
         )

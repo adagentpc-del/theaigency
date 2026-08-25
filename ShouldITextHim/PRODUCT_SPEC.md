@@ -10,27 +10,57 @@ Someone about to send a text in a charged moment (romantic interest, ex, situati
 
 ## Success event
 
-User reaches a verdict in under ~10 seconds from opening the app.
+User reaches a verdict in under ~10 seconds of active input (excluding the few seconds spent typing/pasting into each of the three steps).
+
+## Why a 3-step flow instead of "judge the message alone"
+
+The first build judged the pasted message in isolation and, in real QA, defaulted to **SEND IT** for far too many materially different situations — it had no way to know whether the user was flirting or already being ignored. A message can only be judged correctly with:
+
+1. what the user is trying to accomplish, and
+2. what happened right before this message.
+
+So judgment is now a 4-step flow, and **judgment never runs until all three inputs exist.** See `DECISIONS.md` for the engineering rationale and `AI_SAFETY.md`/`API_CONTRACT.md` for the architecture that makes this possible without a network call.
 
 ## Screens
 
-### 1. Main Input (`InputView`)
+### Step 1 of 3 — Proposed Message (`MessageStepView`)
 
 - App name: **Should I Text Him?**
 - Supporting line: *Before you send it, run it by us.*
+- Prompt: *What are you thinking about sending?*
 - Large multiline text field, placeholder: *Paste what you're about to send...*
-- Primary CTA: **JUDGE MY TEXT**
-- Clear button appears once text is entered.
+- Primary CTA: **NEXT**
 
-States:
-- **Empty** — CTA disabled.
-- **Whitespace-only** — CTA disabled (trimmed check).
-- **Valid text** — CTA enabled.
-- **Judging** — CTA becomes a progress indicator ("Reading the room…"), text field disabled, keyboard dismissed.
+States: empty/whitespace-only disables NEXT; a Clear button appears once text is entered; keyboard has a Done button. **No judgment happens on this screen.**
 
-### 2. Verdict (`VerdictView`)
+### Step 2 of 3 — Goal (`GoalStepView`)
 
-One of four prominent verdicts, each with a distinct color *and* SF Symbol *and* label (never color-only):
+Prompt: *What are you actually trying to accomplish?*
+
+Single-choice list: Flirt · Make plans · Get clarity · Apologize · Set a boundary · Get closure · Just checking in.
+
+A selection is required to advance. This answer is stored for the whole session — it is never asked again, including during the rewrite flow later.
+
+### Step 3 of 3 — Context (`ContextStepView`)
+
+Prompt: *Okay. What happened before this?*
+
+Two mutually exclusive ways to answer, picked via a segmented control:
+
+**Option A — Paste the conversation.** A large multiline field ("Paste the recent conversation here...") with a caption explaining only the relevant recent portion is needed, and a second caption confirming it stays on-device. See `DECISIONS.md`/`AI_SAFETY.md` for what the local engine does and does not do with this free text.
+
+**Option B — Quick context.** Three required single-choice questions:
+- *Who texted last?* — Me / Him / Not sure / mutual
+- *How long since the last message?* — Under an hour / Today / 1–3 days / 4+ days
+- *Did he respond to your last message/question?* — Yes / No / Sort of / There wasn't a question
+
+Plus one optional short free-text field: *Anything else I should know?*
+
+The **JUDGE MY TEXT** CTA is disabled until either Option A has non-blank text or all three Option B questions are answered. Tapping it shows the same loading state pattern as before ("Reading the room…") and only then triggers Step 4.
+
+### Step 4 — Judgment (`VerdictView`)
+
+Runs only after message + goal + context are all present (`JudgeViewModel.submitContext()`). One of the four verdicts, unchanged:
 
 | Verdict | Symbol | Color |
 |---|---|---|
@@ -39,58 +69,38 @@ One of four prominent verdicts, each with a distinct color *and* SF Symbol *and*
 | SLEEP ON IT. | `moon.zzz.fill` | blue |
 | DON'T SEND IT. | `hand.raised.fill` | red |
 
-Below: one concise reason (one to two sentences, no essay).
+A small "Goal: <goal>" caption is shown above the verdict for transparency about what the app judged against. The reason explicitly connects the verdict to goal and/or context (e.g. *"You already asked a direct question and haven't gotten an answer. Another casual check-in probably won't get you the clarity you're looking for."* — see `PRODUCT_SPEC.md`'s worked example reproduced exactly in `ACCEPTANCE_CRITERIA.md` and the fixture suite).
 
-Controls:
-- **HELP ME REWRITE IT** — starts the rewrite-intent flow. Hidden for safety-routed results (see `AI_SAFETY.md`).
-- **START OVER** — always available, returns to a blank input screen.
-- **Share result** — `ShareLink` sharing only the verdict headline and app name as plain text. Hidden for safety-routed results. The user's original message is never included in the shared content.
+Controls: **HELP ME REWRITE IT** (hidden for safety-routed results), **START OVER**, and a privacy-safe text share (hidden for safety-routed results).
 
-### 3. Rewrite Intent (`RewriteIntentView`)
+### Rewrite Result (`RewriteResultView`)
 
-Prompt: *What are you actually trying to do?*
-
-Options (single choice): Flirt · Make plans · Get clarity · Apologize · Set a boundary · Get closure · Say less.
-
-### 4. Rewrite Result (`RewriteResultView`)
-
-Up to 3 concise rewrite options for the chosen intent, each with a **Copy** button (writes to the system clipboard, shows a "Copied to clipboard" confirmation). **Start Over** returns to a blank input screen.
+Since the goal was already collected in Step 2, tapping **HELP ME REWRITE IT** goes straight to up to 3 rewrite options for that goal — there is no second "what are you trying to do" prompt. Each option has a **Copy** button; **Start Over** returns to Step 1.
 
 ## Tone
 
-Funny, sharp, confident, concise, socially aware, non-clinical. The app never:
-
-- diagnoses the other person,
-- claims certainty about someone else's motives or intentions,
-- tells the user someone is definitely cheating, lying, narcissistic, abusive, etc. from insufficient evidence,
-- encourages harassment, repeated unwanted contact, stalking, retaliation, threats, coercion, humiliation, or abuse,
-- implies it is therapy, legal advice, medical advice, or professional relationship counseling.
-
-When context is insufficient, the reason says so rather than inventing certainty.
+Unchanged: funny, sharp, confident, concise, socially aware, non-clinical. The app never diagnoses the other person, claims certainty about their motives, encourages harassment/stalking/coercion/retaliation/humiliation/abuse, or presents itself as therapy/legal/medical/professional counseling.
 
 ## Data behavior
 
-- No account, no login.
-- No conversation history, no cloud sync.
-- The pasted message lives only in view-model memory for the current session; it is never written to disk, UserDefaults, or logs.
-- No network requests happen at all in this release (see `DECISIONS.md`).
-
-Full detail in `PRIVACY_DATA_MAP.md`.
+Unchanged in spirit, expanded in scope: no account, no history, no cloud sync, zero network calls. The proposed message, goal, and whichever context the user provided (pasted conversation or quick-context answers) live only in `JudgeViewModel`'s in-memory properties for the current session and are cleared on START OVER or app termination. See `PRIVACY_DATA_MAP.md` for the full, updated data map.
 
 ## Monetization
 
-Free at launch. No subscriptions, no IAP in this release. See `DECISIONS.md` and `POST_LAUNCH.md` for the deferred one-time-unlock path.
+Unchanged: free at launch, no subscriptions, no IAP in this release.
 
 ## Edge cases handled
 
-- Blank / whitespace-only input (CTA stays disabled).
-- Very long input (100+ words) → routed to REWRITE IT with a "trim it down" reason.
-- Multiline input.
-- High-risk content (threats, self-harm, coercion, stalking, sexual exploitation, abuse indicators) → safety-routed to a calm DON'T SEND IT response; rewrite and share are hidden for these results.
-- Relaunch — no state persists between launches; the app always opens on a blank input screen.
-- Large Dynamic Type — layout uses `ScrollView`/`TextEditor` and system fonts, no fixed-height text truncation.
-- Reduce Motion — phase transitions are skipped (not slowed) when Reduce Motion is on.
+- Blank/whitespace message at Step 1 (NEXT disabled).
+- Quick context left partially answered (JUDGE MY TEXT disabled until all three are set).
+- Pasted conversation left blank while Option A is selected (JUDGE MY TEXT disabled).
+- Very long proposed message (100+ words) → REWRITE IT regardless of goal.
+- High-risk content anywhere the user typed (proposed message, pasted conversation, or the optional notes field) → safety-routed to a calm DON'T SEND IT, with rewrite/share hidden.
+- Back navigation from Step 2 → Step 1 and Step 3 → Step 2 without losing what was already entered.
+- Relaunch — no state persists between launches.
+- Large Dynamic Type / Reduce Motion — unchanged from the first release; see `ACCESSIBILITY_CHECKLIST.md`.
+- Identical proposed message with different context produces different verdicts — this is the core regression test in `LocalJudgmentProviderFixtureTests` proving the reported defect is fixed.
 
-## Explicitly out of scope for v1
+## Explicitly out of scope for this iteration
 
 See `POST_LAUNCH.md`.

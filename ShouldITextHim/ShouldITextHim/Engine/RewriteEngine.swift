@@ -1,18 +1,19 @@
 import Foundation
 
 /// Deterministic, template-based rewrite suggestions keyed by the user's
-/// stated intent. This intentionally does not attempt to parse or rewrite
-/// the user's original wording — it offers three ready-to-edit starting
-/// points in a clearly different tone (direct, warm, playful) so the user
-/// can pick the one closest to their voice and adjust it themselves.
+/// stated goal (collected once, up front — see `Goal`). This intentionally
+/// does not attempt to parse or rewrite the user's original wording — it
+/// offers three ready-to-edit starting points in a clearly different tone
+/// (direct, warm, playful) so the user can pick the one closest to their
+/// voice and adjust it themselves.
 enum RewriteEngine {
 
-    /// Returns up to 3 rewrite options for the given intent.
-    static func options(for intent: Intent) -> [RewriteOption] {
-        templates[intent, default: []].map { RewriteOption(text: $0) }
+    /// Returns up to 3 rewrite options for the given goal.
+    static func options(for goal: Goal) -> [RewriteOption] {
+        templates[goal, default: []].map { RewriteOption(text: $0) }
     }
 
-    private static let templates: [Intent: [String]] = [
+    private static let templates: [Goal: [String]] = [
         .flirt: [
             "Been thinking about you today — what are you up to this week?",
             "Ok not to be dramatic but that was a great time. When are we doing it again?",
@@ -43,10 +44,10 @@ enum RewriteEngine {
             "I think we both know this has run its course. I just wanted to say that clearly instead of fading out.",
             "No hard feelings either way, I'd just like to know where things actually ended up."
         ],
-        .sayLess: [
-            "[trimmed to one sentence — say the one thing that matters and stop]",
-            "Hey — [the actual point]. Talk soon.",
-            "[core message only, no justification, no apology, no extra context]"
+        .checkingIn: [
+            "Hey! It's been a minute — how have you been?",
+            "No big update, just thought of you. Hope things are going well.",
+            "Saw something that reminded me of you today. Hope you're doing okay."
         ]
     ]
 }

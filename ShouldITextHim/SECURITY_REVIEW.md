@@ -9,7 +9,7 @@ Reviewed against the checklist in `MICRO_APP_FACTORY.md` §7 and the Day 1 spec'
 
 ## Sensitive logging
 
-**Finding:** The codebase contains no `print`, `os_log`, `NSLog`, or debugger-only logging of the user's pasted message anywhere in `JudgmentEngine`, `SafetyScanner`, `RewriteEngine`, or `JudgeViewModel`. The message only ever exists as a local variable/property, never serialized to a log sink.
+**Finding:** The codebase contains no `print`, `os_log`, `NSLog`, or debugger-only logging of user content (proposed message, pasted conversation, or quick-context notes) anywhere in `LocalJudgmentProvider`, `SafetyScanner`, `DeterministicJudgmentRules`, `RewriteEngine`, or `JudgeViewModel`. It only ever exists as local variables/properties, never serialized to a log sink.
 **Classification:** NOT APPLICABLE — nothing to fix, confirmed by code review.
 
 ## Insecure networking
@@ -39,7 +39,7 @@ Reviewed against the checklist in `MICRO_APP_FACTORY.md` §7 and the Day 1 spec'
 
 ## Model-output validation
 
-**Finding:** `JudgmentEngine.judge(_:)` returns a strongly-typed `JudgmentResult` (an `enum`/`struct`-backed value, not free-form text parsed at the UI layer), so there is no untrusted "model output" string being parsed or rendered as markup. `Verdict` is a closed `enum`; `RiskFlag` is a closed `enum`; `reason` is a fixed, first-party string chosen from a small set of hardcoded copy strings in the engine itself — never generated from the user's input verbatim. Rewrite options come from a fixed template dictionary (`RewriteEngine`), not from parsing the user's message.
+**Finding:** `LocalJudgmentProvider.judge(_:)` returns a strongly-typed `JudgmentResult` (an `enum`/`struct`-backed value, not free-form text parsed at the UI layer), so there is no untrusted "model output" string being parsed or rendered as markup. `Verdict` is a closed `enum`; `RiskFlag` is a closed `enum`; `reason` is a fixed, first-party string chosen from a small set of hardcoded copy strings in `DeterministicJudgmentRules`/`FallbackJudgment`/`SafetyScanner` — never generated from the user's input verbatim. Rewrite options come from a fixed template dictionary (`RewriteEngine`), not from parsing the user's message. `Goal`, `WhoTextedLast`, `TimeSinceLastMessage`, and `DidHeRespond` are all closed enums driven by picker UI, not free text, so the goal/context signals feeding judgment can't carry unexpected values either.
 **Classification:** NOT APPLICABLE for this release. If a real AI backend is introduced later, its JSON response **must** be decoded into the same strongly-typed `JudgmentResult`/`RiskFlag`/`Verdict` types with a `Codable` decode that fails closed (falls back to a safe default) on any malformed or out-of-enum value — this constraint is documented in `API_CONTRACT.md` as a requirement for that future work, not a gap in this release.
 
 ## Unbounded network requests
@@ -49,13 +49,13 @@ Reviewed against the checklist in `MICRO_APP_FACTORY.md` §7 and the Day 1 spec'
 
 ## Crash / error leakage
 
-**Finding:** The engine has no force-unwraps (`!`) on user-derived data and no `try!`/`fatalError` paths reachable from user input. Empty and whitespace-only strings are handled explicitly (`JudgmentEngineTests.testEmptyInputDoesNotCrashAndReturnsAResult`, `testWhitespaceOnlyInputDoesNotCrash`). Very long input (150+ words) and multiline input are covered by tests and do not special-case in a way that could crash.
+**Finding:** The engine has no force-unwraps (`!`) on user-derived data and no `try!`/`fatalError` paths reachable from user input, including the new context inputs (`JudgeViewModel.buildContextInput()` uses `guard let` rather than force-unwrapping the optional quick-context answers). Empty and whitespace-only strings are handled explicitly. Very long input (150+ words) and multiline input are covered by `LocalJudgmentProviderFixtureTests` and do not special-case in a way that could crash.
 **Classification:** ACCEPTABLE RISK — covered by unit tests; final confirmation requires running the test suite on Apple's toolchain (this container has no Xcode — see `RELEASE_CHECKLIST.md`).
 
 ## Abuse — AI/user-generated content
 
-**Finding:** The app both consumes user-generated content (the pasted message) and generates content back (verdict reason, rewrite suggestions). `AI_SAFETY.md` documents the full rule set: a deterministic keyword/pattern scan (`SafetyScanner`) routes threats of violence, self-harm, coercion, stalking, sexual exploitation, and abuse-indicator language away from the normal witty copy into a calm, non-escalating, non-joking response, and hides the rewrite/share actions for those results so the app never helps polish or amplify risky content. The app makes no medical, legal, financial, or diagnostic claims about the user or the other person (`PRODUCT_SPEC.md` §Tone).
-**Classification:** FIX BEFORE REVIEW → **RESOLVED** in this build (see `AI_SAFETY.md` for the specifics and `SafetyScannerTests`/`JudgmentEngineTests` for coverage). Pattern-list moderation is inherently incomplete; ongoing refinement is tracked as **POST-LAUNCH HARDENING** in `POST_LAUNCH.md`.
+**Finding:** The app both consumes user-generated content (proposed message, pasted conversation, quick-context notes) and generates content back (verdict reason, rewrite suggestions). `AI_SAFETY.md` documents the full rule set: a deterministic keyword/pattern scan (`SafetyScanner`) routes threats of violence, self-harm, coercion, stalking, sexual exploitation, and abuse-indicator language away from the normal witty copy into a calm, non-escalating, non-joking response, and hides the rewrite/share actions for those results so the app never helps polish or amplify risky content. A second, independent mechanism (`DeterministicJudgmentRules`' repeated-contact rule) blocks sending when the user has self-reported already reaching out more than once without a response, closing the "encourage repeated unwanted contact" gap the judgment-flow repair specifically targeted. The app makes no medical, legal, financial, or diagnostic claims about the user or the other person (`PRODUCT_SPEC.md` §Tone).
+**Classification:** FIX BEFORE REVIEW → **RESOLVED** in this build (see `AI_SAFETY.md` for the specifics and `SafetyScannerTests`/`DeterministicJudgmentRulesTests`/`LocalJudgmentProviderFixtureTests` for coverage). Pattern-list moderation is inherently incomplete; ongoing refinement is tracked as **POST-LAUNCH HARDENING** in `POST_LAUNCH.md`.
 
 ## Summary
 

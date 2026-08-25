@@ -2,12 +2,12 @@ import SwiftUI
 
 struct RewriteResultView: View {
     let viewModel: JudgeViewModel
-    let intent: Intent
+    let goal: Goal
     let options: [RewriteOption]
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("\(intent.title) — pick a starting point")
+            Text("\(goal.title) — pick a starting point")
                 .font(.title2.bold())
                 .accessibilityAddTraits(.isHeader)
                 .padding(.top, 12)
@@ -70,7 +70,7 @@ private extension View {
 #Preview {
     RewriteResultView(
         viewModel: JudgeViewModel(),
-        intent: .getClarity,
+        goal: .getClarity,
         options: RewriteEngine.options(for: .getClarity)
     )
 }

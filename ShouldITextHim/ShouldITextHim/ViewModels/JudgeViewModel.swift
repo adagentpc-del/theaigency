@@ -1,46 +1,74 @@
 import Foundation
 import Observation
 
-/// Abstraction over the system clipboard so the view model stays unit
-/// testable without pulling in UIKit in the test target.
-protocol ClipboardWriting {
-    func write(_ text: String)
+/// Which of the two Step 3 context options the user is currently using.
+enum ContextMethod: String, CaseIterable, Identifiable, Hashable {
+    case quick
+    case conversation
+
+    var id: String { rawValue }
 }
 
 /// Screens the user can be on. Modeling this as one enum keeps navigation
-/// state impossible to desync (no separate "isShowingX" booleans that can
-/// contradict each other).
+/// state impossible to desync. Input-collection steps (message/goal/
+/// context) carry no associated data — the view model's own properties
+/// are the single source of truth for those, which is what makes simple
+/// back-navigation between them possible. Only the two "result" phases
+/// carry a snapshot, since those are tied to a specific completed
+/// request.
 enum JudgePhase: Equatable {
-    case input
+    case message
+    case goal
+    case context
     case judging
-    case verdict(JudgmentResult)
-    case rewriteIntent
-    case rewriteResult(Intent, [RewriteOption])
+    case verdict(JudgmentRequest, JudgmentResult)
+    case rewriteResult(Goal, [RewriteOption])
 }
 
 @MainActor
 @Observable
 final class JudgeViewModel {
-    var inputText: String = ""
-    private(set) var phase: JudgePhase = .input
+    // Step 1 — proposed message.
+    var proposedMessage: String = ""
+
+    // Step 2 — goal.
+    var selectedGoal: Goal?
+
+    // Step 3 — context.
+    var contextMethod: ContextMethod = .quick
+    var conversationText: String = ""
+    var quickWhoTextedLast: WhoTextedLast?
+    var quickTimeSinceLastMessage: TimeSinceLastMessage?
+    var quickDidHeRespond: DidHeRespond?
+    var quickAdditionalNotes: String = ""
+
+    private(set) var phase: JudgePhase = .message
     var lastCopiedConfirmation: Bool = false
 
+    private let provider: JudgmentProvider
     private let clipboard: ClipboardWriting
     /// Small artificial delay so the loading state is perceivable and the
-    /// verdict feels considered rather than instantaneous. Kept short to
-    /// respect the "verdict in under ~10 seconds" success target.
+    /// verdict feels considered rather than instantaneous.
     private let judgingDelayNanoseconds: UInt64
 
     init(
+        provider: JudgmentProvider = LocalJudgmentProvider(),
         clipboard: ClipboardWriting = SystemClipboard(),
         judgingDelayNanoseconds: UInt64 = 500_000_000
     ) {
+        self.provider = provider
         self.clipboard = clipboard
         self.judgingDelayNanoseconds = judgingDelayNanoseconds
     }
 
-    var isInputValid: Bool {
-        !inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    // MARK: - Validation
+
+    var isMessageValid: Bool {
+        !proposedMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    var isContextValid: Bool {
+        buildContextInput() != nil
     }
 
     var isJudging: Bool {
@@ -48,32 +76,79 @@ final class JudgeViewModel {
         return false
     }
 
-    func judge() async {
-        guard isInputValid else { return }
+    // MARK: - Step navigation
+
+    func proceedToGoal() {
+        guard isMessageValid else { return }
+        phase = .goal
+    }
+
+    func selectGoal(_ goal: Goal) {
+        selectedGoal = goal
+        phase = .context
+    }
+
+    func backToMessage() {
+        phase = .message
+    }
+
+    func backToGoal() {
+        phase = .goal
+    }
+
+    // MARK: - Judging
+
+    func submitContext() async {
+        guard isMessageValid, let goal = selectedGoal, let context = buildContextInput() else { return }
+        let request = JudgmentRequest(proposedMessage: proposedMessage, goal: goal, context: context)
         phase = .judging
         if judgingDelayNanoseconds > 0 {
             try? await Task.sleep(nanoseconds: judgingDelayNanoseconds)
         }
-        let result = JudgmentEngine.judge(inputText)
-        // The pasted message is only ever held in memory for this call and
-        // is never written to disk or logs. See PRIVACY_DATA_MAP.md.
-        phase = .verdict(result)
+        // The proposed message and context are only ever held in memory
+        // for this call and are never written to disk or logs — see
+        // PRIVACY_DATA_MAP.md.
+        let result = await provider.judge(request)
+        phase = .verdict(request, result)
+    }
+
+    private func buildContextInput() -> ContextInput? {
+        switch contextMethod {
+        case .conversation:
+            let trimmed = conversationText.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty else { return nil }
+            return .conversation(conversationText)
+        case .quick:
+            guard let who = quickWhoTextedLast,
+                  let time = quickTimeSinceLastMessage,
+                  let responded = quickDidHeRespond else { return nil }
+            return .quick(QuickContext(
+                whoTextedLast: who,
+                timeSinceLastMessage: time,
+                didHeRespond: responded,
+                additionalNotes: quickAdditionalNotes
+            ))
+        }
+    }
+
+    // MARK: - Post-verdict actions
+
+    func startRewrite() {
+        guard case .verdict(let request, _) = phase else { return }
+        phase = .rewriteResult(request.goal, RewriteEngine.options(for: request.goal))
     }
 
     func reset() {
-        inputText = ""
-        phase = .input
+        proposedMessage = ""
+        selectedGoal = nil
+        contextMethod = .quick
+        conversationText = ""
+        quickWhoTextedLast = nil
+        quickTimeSinceLastMessage = nil
+        quickDidHeRespond = nil
+        quickAdditionalNotes = ""
         lastCopiedConfirmation = false
-    }
-
-    func startRewrite() {
-        guard case .verdict = phase else { return }
-        phase = .rewriteIntent
-    }
-
-    func selectIntent(_ intent: Intent) {
-        let options = RewriteEngine.options(for: intent)
-        phase = .rewriteResult(intent, options)
+        phase = .message
     }
 
     func copy(_ text: String) {
@@ -81,20 +156,3 @@ final class JudgeViewModel {
         lastCopiedConfirmation = true
     }
 }
-
-#if canImport(UIKit)
-import UIKit
-
-struct SystemClipboard: ClipboardWriting {
-    func write(_ text: String) {
-        UIPasteboard.general.string = text
-    }
-}
-#else
-struct SystemClipboard: ClipboardWriting {
-    func write(_ text: String) {
-        // No-op outside iOS; kept so the type still exists for non-UIKit
-        // builds/tooling.
-    }
-}
-#endif

@@ -9,6 +9,7 @@ Nice-to-haves identified during the build that are explicitly out of scope for t
 ## AI backend
 
 - A real hosted-model judgment engine behind theAIgincy's own server-side proxy, per `API_CONTRACT.md`, if/when the local heuristic proves the product's core loop and usage justifies the operating cost. Would materially improve nuance on messages the current keyword/pattern engine handles generically.
+- Specifically: real understanding of a **pasted conversation** (Step 3, Option A) — who said what, how long ago, the emotional arc — is exactly the gap the local engine deliberately leaves unfilled today (see `DECISIONS.md` decision 9). It currently gives pasted conversations a conservative, honestly-labeled response rather than pretending to understand them; an AI-backed provider is the natural place to close that gap, likely before extending quick-context reasoning further since that path already works well deterministically.
 - If added, extend `AI_SAFETY.md`'s pattern list with a second-pass classifier for higher recall on safety routing (misspellings, non-English text, indirect phrasing) — tracked here rather than v1 because it requires the same backend investment as above.
 
 ## Sharing
@@ -17,7 +18,7 @@ Nice-to-haves identified during the build that are explicitly out of scope for t
 
 ## Personalization (opt-in only)
 
-- A tiny nonsensitive preference or two via `UserDefaults` (e.g. remembering the last-used rewrite intent) if user feedback shows it's wanted — must come with a `PrivacyInfo.xcprivacy` update declaring the `UserDefaults` required-reason API usage.
+- A tiny nonsensitive preference or two via `UserDefaults` (e.g. remembering the last-used goal) if user feedback shows it's wanted — must come with a `PrivacyInfo.xcprivacy` update declaring the `UserDefaults` required-reason API usage.
 
 ## Analytics
 

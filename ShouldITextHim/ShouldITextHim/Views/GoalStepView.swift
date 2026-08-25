@@ -1,24 +1,28 @@
 import SwiftUI
 
-struct RewriteIntentView: View {
+/// Step 2 of 3 — what the user is actually trying to accomplish. This
+/// answer is reused later for rewrite suggestions, so it's never asked
+/// twice.
+struct GoalStepView: View {
     let viewModel: JudgeViewModel
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
-            Text("What are you actually trying to do?")
+            stepHeader
+
+            Text("What are you actually trying to accomplish?")
                 .font(.title2.bold())
                 .accessibilityAddTraits(.isHeader)
-                .padding(.top, 12)
 
             ScrollView {
                 VStack(spacing: 12) {
-                    ForEach(Intent.allCases) { intent in
+                    ForEach(Goal.allCases) { goal in
                         Button {
                             Haptics.tap()
-                            viewModel.selectIntent(intent)
+                            viewModel.selectGoal(goal)
                         } label: {
                             HStack {
-                                Text(intent.title)
+                                Text(goal.title)
                                     .fontWeight(.semibold)
                                 Spacer()
                                 Image(systemName: "chevron.right")
@@ -31,23 +35,32 @@ struct RewriteIntentView: View {
                                     .fill(Color(uiColor: .secondarySystemBackground))
                             )
                         }
-                        .accessibilityLabel(intent.title)
+                        .accessibilityLabel(goal.title)
                         .accessibilityAddTraits(.isButton)
                     }
                 }
             }
-
-            Button("Cancel") {
-                if case .rewriteIntent = viewModel.phase {
-                    viewModel.reset()
-                }
-            }
-            .frame(minHeight: Theme.minimumTapTarget)
         }
         .padding(20)
+    }
+
+    private var stepHeader: some View {
+        HStack {
+            Button {
+                Haptics.tap()
+                viewModel.backToMessage()
+            } label: {
+                Label("Back", systemImage: "chevron.left")
+            }
+            .frame(minHeight: Theme.minimumTapTarget, alignment: .leading)
+            Spacer()
+            Text("Step 2 of 3")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
     }
 }
 
 #Preview {
-    RewriteIntentView(viewModel: JudgeViewModel())
+    GoalStepView(viewModel: JudgeViewModel())
 }

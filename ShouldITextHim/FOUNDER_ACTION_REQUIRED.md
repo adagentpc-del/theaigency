@@ -2,16 +2,16 @@
 
 Everything here needs your credentials, hardware, domain access, or a business decision — none of it can be completed autonomously in this build environment.
 
-## 1. Build & test on a real Apple toolchain *(blocker)*
+## 1. Build & test the judgment-flow repair on a real Apple toolchain *(blocker)*
 
-This session ran in a Linux container with no Xcode/macOS available, so the app has **never actually been compiled**. Every file was written and manually reviewed for correctness, but:
-- Open `ShouldITextHim.xcodeproj` in current Xcode and build the `ShouldITextHim` scheme.
-- Run the test suite (`Cmd+U`) and fix anything that doesn't compile or pass.
+You confirmed the pre-repair build compiled and ran, and your physical-device QA is exactly what surfaced the judgment-logic defect this repair fixes. This repair itself was authored the same way the original build was — in a Linux container with no Xcode/macOS available — so its new/changed files (the whole judgment engine, the new 4-step flow, `Goal`/`QuickContext`/`ContextInput`/`JudgmentRequest`) have **not yet been compiled**. Every file was written and manually reviewed for correctness, and all 34 product QA fixtures were hand-traced against the implementation, but:
+- Pull this commit, open `ShouldITextHim.xcodeproj` in current Xcode, and build the `ShouldITextHim` scheme.
+- Run the test suite (`Cmd+U`) — pay particular attention to `LocalJudgmentProviderFixtureTests`, which is the direct regression test for the defect you found.
 - This is the single most important next step — see `RELEASE_CHECKLIST.md`.
 
-## 2. Physical-device QA *(blocker)*
+## 2. Physical-device QA of the new flow *(blocker)*
 
-Requires your iPhone. Walk the full flow (input → all four verdict types → rewrite flow → copy → share → start over → relaunch), then repeat with VoiceOver on, Dynamic Type maxed, and Reduce Motion on. Checklist in `RELEASE_CHECKLIST.md` → "Recommended first steps on a Mac."
+Requires your iPhone. Walk the full 4-step flow (message → goal → context → verdict → optional rewrite → copy/share → start over → relaunch) with several different goal/context combinations — specifically re-test the exact scenario that surfaced the original defect, plus a few from the fixture list in `LocalJudgmentProviderFixtureTests` (healthy flirting, unanswered question, angry message, safety-sensitive input). Then repeat with VoiceOver on, Dynamic Type maxed, and Reduce Motion on across all four steps. Checklist in `RELEASE_CHECKLIST.md` → "Recommended first steps on a Mac."
 
 ## 3. App icon artwork
 

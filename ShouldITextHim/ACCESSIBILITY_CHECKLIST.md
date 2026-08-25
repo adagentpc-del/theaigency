@@ -11,7 +11,8 @@ Status legend: ✅ implemented in code · 🔲 needs physical-device/simulator v
 - ✅ Screen titles (app name, intent prompt, rewrite header) are marked `.isHeader` for VoiceOver rotor navigation.
 - ✅ Copy buttons are labeled "Copy this rewrite"; a live "Copied to clipboard" confirmation is exposed via `.updatesFrequently`.
 - ✅ Share button has an explicit label and a hint clarifying it does not include the original message.
-- 🔲 Manual VoiceOver sweep on-device: confirm reading order top-to-bottom on every screen, confirm no unlabeled controls, confirm double-tap activates every control.
+- ✅ (Step 3, added in the judgment-flow repair) Each quick-context choice button (who texted last / time since / did he respond) has an explicit `accessibilityLabel` and toggles the `.isSelected` trait so VoiceOver announces the current answer, not just the option text. The context-method segmented picker has an explicit label.
+- 🔲 Manual VoiceOver sweep on-device: confirm reading order top-to-bottom on every screen (now 4 steps instead of 2), confirm no unlabeled controls, confirm double-tap activates every control.
 
 ## Dynamic Type
 

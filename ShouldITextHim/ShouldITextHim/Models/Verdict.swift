@@ -1,7 +1,7 @@
 import Foundation
 
 /// The four possible outcomes of judging a message.
-enum Verdict: String, Codable, CaseIterable, Equatable {
+enum Verdict: String, Codable, CaseIterable, Hashable {
     case send
     case rewrite
     case sleep

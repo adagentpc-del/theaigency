@@ -19,19 +19,23 @@ Paste the text. Get a verdict. Send it, rewrite it, sleep on it, or don't. Zero 
 ```
 Before you send the text you may regret, run it through the app.
 
-Paste what you're about to send. Get one clear verdict:
+Paste what you're about to send, tell us what you're actually
+trying to do (flirt, make plans, get clarity, apologize, set a
+boundary, get closure, or just check in), and give us a little
+context — paste the recent conversation or answer three quick
+questions. Get one clear verdict:
 
 SEND IT.
 REWRITE IT.
 SLEEP ON IT.
 DON'T SEND IT.
 
-Then a short, honest reason — no essay, no lecture.
+Then a short, honest reason that actually connects to your goal
+and what's been going on — not just a vibe check on the words.
 
-If it needs work, tell us what you're actually trying to do
-(flirt, make plans, get clarity, apologize, set a boundary, get
-closure, or just say less) and get up to three rewrite options
-you can copy and use immediately.
+If it needs work, get up to three rewrite options you can copy
+and use immediately — we already know what you're going for, so
+we won't ask twice.
 
 WHY IT'S DIFFERENT
 — No account. No login. No history saved.
@@ -79,24 +83,31 @@ Both must be live, real pages before submission — see `FOUNDER_ACTION_REQUIRED
 ## App Review notes (draft)
 
 ```
-Should I Text Him? judges a pasted message and returns a verdict
+Should I Text Him? walks the user through three quick steps —
+their proposed message, what they're trying to accomplish, and
+what happened before it (either a pasted conversation excerpt or
+three quick multiple-choice questions) — then returns a verdict
 (Send it / Rewrite it / Sleep on it / Don't send it) plus an
 optional rewrite. All judgment logic runs on-device — the app
 makes no network requests, requires no account, and stores no
 user content beyond the current session (see PRIVACY_DATA_MAP.md
 in the source repo for full detail).
 
-The app includes a safety-routing feature: if the pasted message
-itself contains language indicating violence, self-harm, coercion,
-stalking, sexual exploitation, or abuse, the app returns a calm,
-non-comedic "Don't send it" response instead of its usual witty
-tone, and hides the rewrite/share actions for that result. This is
-implemented as a local, deterministic pattern match
-(see AI_SAFETY.md) — there is no live moderation service.
+The app includes a safety-routing feature: if any of the free
+text the user enters (proposed message, pasted conversation, or
+the optional context notes) contains language indicating violence,
+self-harm, coercion, stalking, sexual exploitation, or abuse, the
+app returns a calm, non-comedic "Don't send it" response instead
+of its usual witty tone, and hides the rewrite/share actions for
+that result. This is implemented as a local, deterministic pattern
+match (see AI_SAFETY.md) — there is no live moderation service.
 
-To test the safety-routing path, paste a message containing an
-explicit threat (e.g. "I will hurt you if you don't answer") and
-confirm the app returns a calm decline rather than a joke.
+To test the safety-routing path: enter any proposed message, pick
+any goal, then on the context step either paste a conversation or
+answer the quick questions, but put an explicit threat in the
+message or the optional notes field (e.g. "I will hurt you if you
+don't answer") and confirm the app returns a calm decline rather
+than a joke.
 
 The app is not therapy, counseling, or a crisis service, and does
 not claim to be — this is stated in the app's own copy.
@@ -104,12 +115,13 @@ not claim to be — this is stated in the app's own copy.
 
 ## Screenshot shot list
 
-1. Input screen with a relatable example message pasted in, CTA visible.
-2. Verdict screen — **SEND IT.** (green), showing the reason text.
-3. Verdict screen — **REWRITE IT.** (orange), showing HELP ME REWRITE IT button.
-4. Rewrite-intent screen showing the 7 intent options.
-5. Rewrite-result screen with 2–3 rewrite options and Copy buttons visible.
-6. (Optional) Verdict screen — **DON'T SEND IT.** (red), to show range without using a real high-risk example — use an angry/insulting sample message, not a safety-routed one, for a store screenshot.
+1. Step 1 message screen with a relatable example message pasted in, NEXT visible.
+2. Step 2 goal screen showing the 7 goal options.
+3. Step 3 context screen, quick-context variant, with the three questions visible.
+4. Verdict screen — **SEND IT.** (green), showing the reason text connected to goal/context.
+5. Verdict screen — **REWRITE IT.** (orange), showing HELP ME REWRITE IT button.
+6. Rewrite-result screen with 2–3 rewrite options and Copy buttons visible.
+7. (Optional) Verdict screen — **DON'T SEND IT.** (red), to show range without using a real high-risk example — use an angry/insulting sample message, not a safety-routed one, for a store screenshot.
 
 All screenshots must be captured from the actual running app on the target device sizes Apple currently requires — no mockups/composited text. See `FOUNDER_ACTION_REQUIRED.md`.
 

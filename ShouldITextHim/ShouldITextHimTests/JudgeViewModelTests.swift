@@ -6,76 +6,224 @@ final class FakeClipboard: ClipboardWriting {
     func write(_ text: String) { lastWrite = text }
 }
 
+/// Stubs judgment entirely so these tests exercise only the view model's
+/// step-navigation and state-management logic. The real deterministic
+/// engine is exercised separately and thoroughly by
+/// `LocalJudgmentProviderFixtureTests`.
+struct FakeJudgmentProvider: JudgmentProvider {
+    let result: JudgmentResult
+    func judge(_ request: JudgmentRequest) async -> JudgmentResult { result }
+}
+
+private let stubResult = JudgmentResult(
+    verdict: .send,
+    reason: "stub",
+    riskFlags: [],
+    isSafetyRouted: false
+)
+
 @MainActor
 final class JudgeViewModelTests: XCTestCase {
 
-    private func makeViewModel(clipboard: FakeClipboard = FakeClipboard()) -> JudgeViewModel {
-        JudgeViewModel(clipboard: clipboard, judgingDelayNanoseconds: 0)
+    private func makeViewModel(
+        result: JudgmentResult = stubResult,
+        clipboard: FakeClipboard = FakeClipboard()
+    ) -> JudgeViewModel {
+        JudgeViewModel(
+            provider: FakeJudgmentProvider(result: result),
+            clipboard: clipboard,
+            judgingDelayNanoseconds: 0
+        )
     }
 
-    func testBlankInputIsInvalid() {
+    // MARK: - Step 1: message
+
+    func testBlankMessageIsInvalid() {
         let vm = makeViewModel()
-        vm.inputText = ""
-        XCTAssertFalse(vm.isInputValid)
+        vm.proposedMessage = ""
+        XCTAssertFalse(vm.isMessageValid)
     }
 
-    func testWhitespaceOnlyInputIsInvalid() {
+    func testWhitespaceOnlyMessageIsInvalid() {
         let vm = makeViewModel()
-        vm.inputText = "   \n\t "
-        XCTAssertFalse(vm.isInputValid)
+        vm.proposedMessage = "   \n\t "
+        XCTAssertFalse(vm.isMessageValid)
     }
 
-    func testNormalInputIsValid() {
+    func testProceedToGoalDoesNothingWithBlankMessage() {
         let vm = makeViewModel()
-        vm.inputText = "Hey, are we still on for tonight?"
-        XCTAssertTrue(vm.isInputValid)
+        vm.proposedMessage = ""
+        vm.proceedToGoal()
+        XCTAssertEqual(vm.phase, .message)
     }
 
-    func testJudgeDoesNothingForBlankInput() async {
+    func testProceedToGoalAdvancesWithValidMessage() {
         let vm = makeViewModel()
-        vm.inputText = ""
-        await vm.judge()
-        XCTAssertEqual(vm.phase, .input)
+        vm.proposedMessage = "Hey, are we still on for tonight?"
+        vm.proceedToGoal()
+        XCTAssertEqual(vm.phase, .goal)
     }
 
-    func testJudgeTransitionsToVerdict() async {
+    // MARK: - Step 2: goal
+
+    func testSelectGoalAdvancesToContext() {
         let vm = makeViewModel()
-        vm.inputText = "Hey! Thanks again for today, that was fun."
-        await vm.judge()
-        guard case .verdict = vm.phase else {
+        vm.proposedMessage = "Hey"
+        vm.proceedToGoal()
+        vm.selectGoal(.getClarity)
+        XCTAssertEqual(vm.phase, .context)
+        XCTAssertEqual(vm.selectedGoal, .getClarity)
+    }
+
+    // MARK: - Back navigation
+
+    func testBackToMessageFromGoal() {
+        let vm = makeViewModel()
+        vm.proposedMessage = "Hey"
+        vm.proceedToGoal()
+        vm.backToMessage()
+        XCTAssertEqual(vm.phase, .message)
+    }
+
+    func testBackToGoalFromContext() {
+        let vm = makeViewModel()
+        vm.proposedMessage = "Hey"
+        vm.proceedToGoal()
+        vm.selectGoal(.flirt)
+        vm.backToGoal()
+        XCTAssertEqual(vm.phase, .goal)
+    }
+
+    // MARK: - Step 3: context validation
+
+    func testQuickContextInvalidUntilAllThreeAnswered() {
+        let vm = makeViewModel()
+        vm.contextMethod = .quick
+        XCTAssertFalse(vm.isContextValid)
+        vm.quickWhoTextedLast = .me
+        XCTAssertFalse(vm.isContextValid)
+        vm.quickTimeSinceLastMessage = .today
+        XCTAssertFalse(vm.isContextValid)
+        vm.quickDidHeRespond = .no
+        XCTAssertTrue(vm.isContextValid)
+    }
+
+    func testConversationContextRequiresNonBlankText() {
+        let vm = makeViewModel()
+        vm.contextMethod = .conversation
+        XCTAssertFalse(vm.isContextValid)
+        vm.conversationText = "   "
+        XCTAssertFalse(vm.isContextValid)
+        vm.conversationText = "Him: hey\nMe: hey!"
+        XCTAssertTrue(vm.isContextValid)
+    }
+
+    // MARK: - Step 4: judgment only fires after all three steps
+
+    func testSubmitContextDoesNothingWithoutGoal() async {
+        let vm = makeViewModel()
+        vm.proposedMessage = "Hey"
+        vm.contextMethod = .quick
+        vm.quickWhoTextedLast = .me
+        vm.quickTimeSinceLastMessage = .today
+        vm.quickDidHeRespond = .noQuestion
+        await vm.submitContext()
+        XCTAssertEqual(vm.phase, .message)
+    }
+
+    func testSubmitContextDoesNothingWithoutContext() async {
+        let vm = makeViewModel()
+        vm.proposedMessage = "Hey"
+        vm.proceedToGoal()
+        vm.selectGoal(.checkingIn)
+        await vm.submitContext()
+        XCTAssertEqual(vm.phase, .context)
+    }
+
+    func testSubmitContextProducesVerdictOnlyAfterAllThreeSteps() async {
+        let vm = makeViewModel()
+        XCTAssertEqual(vm.phase, .message)
+
+        vm.proposedMessage = "Hey, how's it going?"
+        vm.proceedToGoal()
+        XCTAssertEqual(vm.phase, .goal)
+
+        vm.selectGoal(.checkingIn)
+        XCTAssertEqual(vm.phase, .context)
+
+        vm.contextMethod = .quick
+        vm.quickWhoTextedLast = .him
+        vm.quickTimeSinceLastMessage = .today
+        vm.quickDidHeRespond = .yes
+
+        await vm.submitContext()
+        guard case .verdict(let request, let result) = vm.phase else {
             return XCTFail("Expected verdict phase, got \(vm.phase)")
         }
+        XCTAssertEqual(request.proposedMessage, "Hey, how's it going?")
+        XCTAssertEqual(request.goal, .checkingIn)
+        XCTAssertEqual(result, stubResult)
     }
 
-    func testResetReturnsToInputAndClearsText() async {
+    // MARK: - Rewrite
+
+    func testStartRewriteUsesGoalFromTheOriginalRequest() async {
         let vm = makeViewModel()
-        vm.inputText = "Some message"
-        await vm.judge()
-        vm.reset()
-        XCTAssertEqual(vm.phase, .input)
-        XCTAssertEqual(vm.inputText, "")
+        vm.proposedMessage = "Hey"
+        vm.proceedToGoal()
+        vm.selectGoal(.apologize)
+        vm.contextMethod = .quick
+        vm.quickWhoTextedLast = .me
+        vm.quickTimeSinceLastMessage = .today
+        vm.quickDidHeRespond = .noQuestion
+        await vm.submitContext()
+
+        vm.startRewrite()
+        guard case .rewriteResult(let goal, let options) = vm.phase else {
+            return XCTFail("Expected rewriteResult phase")
+        }
+        XCTAssertEqual(goal, .apologize)
+        XCTAssertFalse(options.isEmpty)
     }
 
     func testStartRewriteOnlyWorksFromVerdict() {
         let vm = makeViewModel()
         vm.startRewrite()
-        XCTAssertEqual(vm.phase, .input)
+        XCTAssertEqual(vm.phase, .message)
     }
 
-    func testFullRewriteFlow() async {
+    // MARK: - Reset / relaunch
+
+    func testResetClearsEveryStepsState() async {
         let vm = makeViewModel()
-        vm.inputText = "Hey! Thanks again for today, that was fun."
-        await vm.judge()
-        vm.startRewrite()
-        XCTAssertEqual(vm.phase, .rewriteIntent)
+        vm.proposedMessage = "Hey"
+        vm.proceedToGoal()
+        vm.selectGoal(.getClosure)
+        vm.contextMethod = .conversation
+        vm.conversationText = "Him: hey\nMe: hey"
+        vm.quickAdditionalNotes = "note"
 
-        vm.selectIntent(.getClarity)
-        guard case .rewriteResult(let intent, let options) = vm.phase else {
-            return XCTFail("Expected rewriteResult phase")
-        }
-        XCTAssertEqual(intent, .getClarity)
-        XCTAssertFalse(options.isEmpty)
+        vm.reset()
+
+        XCTAssertEqual(vm.phase, .message)
+        XCTAssertEqual(vm.proposedMessage, "")
+        XCTAssertNil(vm.selectedGoal)
+        XCTAssertEqual(vm.contextMethod, .quick)
+        XCTAssertEqual(vm.conversationText, "")
+        XCTAssertNil(vm.quickWhoTextedLast)
+        XCTAssertNil(vm.quickTimeSinceLastMessage)
+        XCTAssertNil(vm.quickDidHeRespond)
+        XCTAssertEqual(vm.quickAdditionalNotes, "")
     }
+
+    func testRelaunchEquivalentStartsFreshWithNoRetainedState() {
+        let vm = makeViewModel()
+        XCTAssertEqual(vm.phase, .message)
+        XCTAssertEqual(vm.proposedMessage, "")
+        XCTAssertNil(vm.selectedGoal)
+    }
+
+    // MARK: - Copy
 
     func testCopyWritesToClipboardAndSetsConfirmation() {
         let clipboard = FakeClipboard()
@@ -83,13 +231,5 @@ final class JudgeViewModelTests: XCTestCase {
         vm.copy("test message")
         XCTAssertEqual(clipboard.lastWrite, "test message")
         XCTAssertTrue(vm.lastCopiedConfirmation)
-    }
-
-    func testRelaunchEquivalentStartsFreshWithNoRetainedText() {
-        // Simulates "relaunch" by constructing a brand new view model, the
-        // same as a fresh process start would, since no state is persisted.
-        let vm = makeViewModel()
-        XCTAssertEqual(vm.phase, .input)
-        XCTAssertEqual(vm.inputText, "")
     }
 }

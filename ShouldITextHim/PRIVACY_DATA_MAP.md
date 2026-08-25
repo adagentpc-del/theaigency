@@ -4,19 +4,22 @@ This document describes exactly what the shipped code does. It is the source of 
 
 ## What the user enters
 
-- The text of the message they're considering sending, typed or pasted into a single text field.
-- A selection from a fixed list of 7 rewrite intents (e.g. "Apologize").
+Across the 3-step input flow:
+
+- **Step 1**: the text of the message they're considering sending, typed or pasted into a single text field (`proposedMessage`).
+- **Step 2**: a selection from a fixed list of 7 goals (e.g. "Apologize").
+- **Step 3**: either (a) a pasted excerpt of a recent conversation (`conversationText`), or (b) three closed-choice answers (who texted last, how long since the last message, whether the other person responded) plus one optional short free-text note (`quickAdditionalNotes`).
 
 ## What remains on-device
 
-Everything. The pasted message is held only in the `JudgeViewModel`'s in-memory `inputText` property for the duration of the current app session. It is:
+Everything, for every field above. All of it is held only in the `JudgeViewModel`'s in-memory properties for the duration of the current app session. It is:
 
 - **Not** written to `UserDefaults`.
 - **Not** written to any file, database, or cache.
 - **Not** logged via `print`, `os_log`, or any crash/analytics tool.
-- Cleared from memory whenever the user taps START OVER or force-quits/relaunches the app (nothing survives process death — there is no persistence layer to survive it).
+- Cleared from memory whenever the user taps START OVER or force-quits/relaunches the app (nothing survives process death — there is no persistence layer to survive it). This includes every step's data, not just the proposed message — `JudgeViewModel.reset()` clears the message, the selected goal, the context method, the pasted conversation, and all quick-context answers together.
 
-The judgment itself (`JudgmentEngine`, `SafetyScanner`, `RewriteEngine`) runs entirely on-device using deterministic Swift logic — no model inference call, local or remote.
+The judgment itself (`SafetyScanner`, `MessageSignals`, `ContextSignals`, `DeterministicJudgmentRules`, `FallbackJudgment` — composed by `LocalJudgmentProvider`) runs entirely on-device using deterministic Swift logic — no model inference call, local or remote. See `DECISIONS.md` and `API_CONTRACT.md` for the `JudgmentProvider` abstraction that would apply if a remote engine is introduced later, and the privacy-map update that would require.
 
 ## What leaves the device
 
@@ -44,7 +47,7 @@ None. No IAP is implemented in this release (see `DECISIONS.md`). If a one-time 
 
 ## Retention
 
-Nothing is retained. The pasted message does not outlive the current view of the verdict screen (it's discarded on START OVER and, trivially, on app termination since it was never persisted).
+Nothing is retained. No field from any of the three input steps outlives the current session (all are discarded together on START OVER and, trivially, on app termination since none of it was ever persisted).
 
 ## Deletion
 
