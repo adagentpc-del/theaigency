@@ -13,7 +13,8 @@ Status legend: ✅ implemented in code · 🔲 needs physical-device/simulator v
 - ✅ Share button has an explicit label and a hint clarifying it does not include the original message.
 - ✅ (Step 3, added in the judgment-flow repair) Each quick-context choice button (who texted last / time since / did he respond) has an explicit `accessibilityLabel` and toggles the `.isSelected` trait so VoiceOver announces the current answer, not just the option text. The context-method segmented picker has an explicit label.
 - ✅ (Verdict screen, added with the AI-backend redesign) The local-fallback banner's retry button ("Try again for full analysis") is a plain labeled `Button`, not combined into a single `accessibilityElement`, so VoiceOver can focus and activate it independently of the banner's explanatory text. The banner text itself uses a system SF Symbol (`wifi.slash`) paired with a full sentence, not color or icon alone, matching the "non-color-only state communication" rule below.
-- 🔲 Manual VoiceOver sweep on-device: confirm reading order top-to-bottom on every screen (now 4 steps instead of 2), confirm no unlabeled controls, confirm double-tap activates every control, including the local-fallback retry button when a judgment falls back.
+- ✅ (Verdict screen, added with the self-hosted local-inference migration) The NEED MORE CONTEXT verdict's headline uses a full-sentence `accessibilityLabel` ("Verdict: I need more context to judge this.") like every other verdict, and its ADD MORE CONTEXT button has an explicit `accessibilityHint` explaining what it does, rather than relying on the visual label alone.
+- 🔲 Manual VoiceOver sweep on-device: confirm reading order top-to-bottom on every screen (now 4 steps instead of 2), confirm no unlabeled controls, confirm double-tap activates every control, including the local-fallback retry button and the ADD MORE CONTEXT button.
 
 ## Dynamic Type
 

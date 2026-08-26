@@ -1,0 +1,1146 @@
+[
+  {
+    "name": "Profanity outside keyword list (exact regression)",
+    "category": "profanity",
+    "message": "hello gangster what the fuck is your problem",
+    "goal": "getClarity",
+    "context": {
+      "quick": {
+        "whoTextedLast": "notSure",
+        "timeSinceLastMessage": "today",
+        "didHeRespond": "noQuestion",
+        "additionalNotes": ""
+      }
+    },
+    "idealVerdict": "dont_send",
+    "unacceptable": [
+      "send"
+    ],
+    "rationale": "The exact profanity regression from the second QA pass. This message doesn't match any hardcoded anger phrase, which is precisely why it must never be resolved by keyword matching alone."
+  },
+  {
+    "name": "Profanity, direct insult",
+    "category": "profanity",
+    "message": "you are being a real asshole about this",
+    "goal": "setBoundary",
+    "context": {
+      "quick": {
+        "whoTextedLast": "notSure",
+        "timeSinceLastMessage": "today",
+        "didHeRespond": "noQuestion",
+        "additionalNotes": ""
+      }
+    },
+    "idealVerdict": "dont_send",
+    "unacceptable": [
+      "send"
+    ],
+    "rationale": "Calling someone an insult while claiming to 'set a boundary' is not a boundary — the goal label must not launder the tone."
+  },
+  {
+    "name": "Profanity, dismissive",
+    "category": "profanity",
+    "message": "this is such bullshit and you know it",
+    "goal": "getClarity",
+    "context": {
+      "quick": {
+        "whoTextedLast": "notSure",
+        "timeSinceLastMessage": "today",
+        "didHeRespond": "noQuestion",
+        "additionalNotes": ""
+      }
+    },
+    "idealVerdict": "dont_send",
+    "unacceptable": [
+      "send"
+    ],
+    "rationale": "Confrontational profanity aimed at the recipient, not a request for clarity."
+  },
+  {
+    "name": "Profanity, hostile dismissal",
+    "category": "profanity",
+    "message": "get the hell away from me and don't text again",
+    "goal": "checkingIn",
+    "context": {
+      "quick": {
+        "whoTextedLast": "notSure",
+        "timeSinceLastMessage": "today",
+        "didHeRespond": "noQuestion",
+        "additionalNotes": ""
+      }
+    },
+    "idealVerdict": "dont_send",
+    "unacceptable": [
+      "send"
+    ],
+    "rationale": "Hostile rejection framed under an innocuous goal label."
+  },
+  {
+    "name": "Euphemistic hostility, backhanded",
+    "category": "euphemistic hostility",
+    "message": "must be lovely having so much free time for everyone except me",
+    "goal": "checkingIn",
+    "context": {
+      "quick": {
+        "whoTextedLast": "notSure",
+        "timeSinceLastMessage": "today",
+        "didHeRespond": "noQuestion",
+        "additionalNotes": ""
+      }
+    },
+    "idealVerdict": "dont_send",
+    "unacceptable": [
+      "send"
+    ],
+    "rationale": "Reads as friendly on the surface but is a pointed accusation."
+  },
+  {
+    "name": "Euphemistic hostility, pointed observation",
+    "category": "euphemistic hostility",
+    "message": "interesting how you always have time for everyone except me",
+    "goal": "getClarity",
+    "context": {
+      "quick": {
+        "whoTextedLast": "notSure",
+        "timeSinceLastMessage": "today",
+        "didHeRespond": "noQuestion",
+        "additionalNotes": ""
+      }
+    },
+    "idealVerdict": "dont_send",
+    "unacceptable": [
+      "send"
+    ],
+    "rationale": "Framed as a neutral observation, functions as an accusation."
+  },
+  {
+    "name": "Euphemistic hostility, mock politeness",
+    "category": "euphemistic hostility",
+    "message": "no worries, I'm sure you were just \"busy\"",
+    "goal": "checkingIn",
+    "context": {
+      "quick": {
+        "whoTextedLast": "notSure",
+        "timeSinceLastMessage": "today",
+        "didHeRespond": "noQuestion",
+        "additionalNotes": ""
+      }
+    },
+    "idealVerdict": "dont_send",
+    "unacceptable": [
+      "send"
+    ],
+    "rationale": "Scare-quoted 'busy' signals disbelief and irritation, not reassurance."
+  },
+  {
+    "name": "Euphemistic hostility, minimizing sarcasm",
+    "category": "euphemistic hostility",
+    "message": "wow, didn't realize replying was such a huge ask",
+    "goal": "getClarity",
+    "context": {
+      "quick": {
+        "whoTextedLast": "notSure",
+        "timeSinceLastMessage": "today",
+        "didHeRespond": "noQuestion",
+        "additionalNotes": ""
+      }
+    },
+    "idealVerdict": "dont_send",
+    "unacceptable": [
+      "send"
+    ],
+    "rationale": "Sarcastic minimization aimed at the recipient's behavior."
+  },
+  {
+    "name": "Sarcasm, fake patience",
+    "category": "sarcasm",
+    "message": "oh sure, take your time, it's not like I asked days ago",
+    "goal": "getClarity",
+    "context": {
+      "quick": {
+        "whoTextedLast": "notSure",
+        "timeSinceLastMessage": "today",
+        "didHeRespond": "noQuestion",
+        "additionalNotes": ""
+      }
+    },
+    "idealVerdict": "dont_send",
+    "unacceptable": [
+      "send"
+    ],
+    "rationale": "Sarcastic 'take your time' is the opposite of patient."
+  },
+  {
+    "name": "Sarcasm, fake gratitude",
+    "category": "sarcasm",
+    "message": "great talk, really enjoyed being ignored",
+    "goal": "checkingIn",
+    "context": {
+      "quick": {
+        "whoTextedLast": "notSure",
+        "timeSinceLastMessage": "today",
+        "didHeRespond": "noQuestion",
+        "additionalNotes": ""
+      }
+    },
+    "idealVerdict": "dont_send",
+    "unacceptable": [
+      "send"
+    ],
+    "rationale": "Sarcastic praise used to express resentment."
+  },
+  {
+    "name": "Sarcasm, mock contentment",
+    "category": "sarcasm",
+    "message": "totally fine, I love waiting around for you",
+    "goal": "makePlans",
+    "context": {
+      "quick": {
+        "whoTextedLast": "notSure",
+        "timeSinceLastMessage": "today",
+        "didHeRespond": "noQuestion",
+        "additionalNotes": ""
+      }
+    },
+    "idealVerdict": "dont_send",
+    "unacceptable": [
+      "send"
+    ],
+    "rationale": "Reads as agreeable but communicates frustration."
+  },
+  {
+    "name": "Sarcasm, rhetorical dig",
+    "category": "sarcasm",
+    "message": "yeah because that worked out so well last time, right?",
+    "goal": "getClarity",
+    "context": {
+      "quick": {
+        "whoTextedLast": "notSure",
+        "timeSinceLastMessage": "today",
+        "didHeRespond": "noQuestion",
+        "additionalNotes": ""
+      }
+    },
+    "idealVerdict": "dont_send",
+    "unacceptable": [
+      "send"
+    ],
+    "rationale": "Rhetorical sarcasm aimed at relitigating a past conflict."
+  },
+  {
+    "name": "Passive aggression, exaggerated forgiveness",
+    "category": "passive aggression",
+    "message": "no it's totally fine that you canceled AGAIN, don't even worry about it",
+    "goal": "checkingIn",
+    "context": {
+      "quick": {
+        "whoTextedLast": "notSure",
+        "timeSinceLastMessage": "today",
+        "didHeRespond": "noQuestion",
+        "additionalNotes": ""
+      }
+    },
+    "idealVerdict": "dont_send",
+    "unacceptable": [
+      "send"
+    ],
+    "rationale": "Emphasized 'AGAIN' undercuts the surface-level forgiveness."
+  },
+  {
+    "name": "Passive aggression, mock deference",
+    "category": "passive aggression",
+    "message": "whatever you say, since you're always right anyway",
+    "goal": "getClarity",
+    "context": {
+      "quick": {
+        "whoTextedLast": "notSure",
+        "timeSinceLastMessage": "today",
+        "didHeRespond": "noQuestion",
+        "additionalNotes": ""
+      }
+    },
+    "idealVerdict": "dont_send",
+    "unacceptable": [
+      "send"
+    ],
+    "rationale": "Mock deference used to express contempt."
+  },
+  {
+    "name": "Passive aggression, dismissive resignation",
+    "category": "passive aggression",
+    "message": "sure sure sure, glad I could be an option for you",
+    "goal": "getClarity",
+    "context": {
+      "quick": {
+        "whoTextedLast": "notSure",
+        "timeSinceLastMessage": "today",
+        "didHeRespond": "noQuestion",
+        "additionalNotes": ""
+      }
+    },
+    "idealVerdict": "dont_send",
+    "unacceptable": [
+      "send"
+    ],
+    "rationale": "Resigned tone masking a pointed accusation of being deprioritized."
+  },
+  {
+    "name": "Passive aggression, wounded pride",
+    "category": "passive aggression",
+    "message": "nice knowing my time doesn't matter to you",
+    "goal": "checkingIn",
+    "context": {
+      "quick": {
+        "whoTextedLast": "notSure",
+        "timeSinceLastMessage": "today",
+        "didHeRespond": "noQuestion",
+        "additionalNotes": ""
+      }
+    },
+    "idealVerdict": "dont_send",
+    "unacceptable": [
+      "send"
+    ],
+    "rationale": "Accusatory framing dressed as a passing remark."
+  },
+  {
+    "name": "Guilt trip, martyrdom",
+    "category": "guilt trip",
+    "message": "guess I'll just sit here alone again, no big deal",
+    "goal": "makePlans",
+    "context": {
+      "quick": {
+        "whoTextedLast": "notSure",
+        "timeSinceLastMessage": "today",
+        "didHeRespond": "noQuestion",
+        "additionalNotes": ""
+      }
+    },
+    "idealVerdict": "dont_send",
+    "unacceptable": [
+      "send"
+    ],
+    "rationale": "Manufactured self-pity intended to induce guilt."
+  },
+  {
+    "name": "Guilt trip, keeping score",
+    "category": "guilt trip",
+    "message": "after everything I've done for you, this is how you treat me?",
+    "goal": "getClarity",
+    "context": {
+      "quick": {
+        "whoTextedLast": "notSure",
+        "timeSinceLastMessage": "today",
+        "didHeRespond": "noQuestion",
+        "additionalNotes": ""
+      }
+    },
+    "idealVerdict": "dont_send",
+    "unacceptable": [
+      "send"
+    ],
+    "rationale": "Explicit guilt-leveraging framing."
+  },
+  {
+    "name": "Guilt trip, one-sided sacrifice",
+    "category": "guilt trip",
+    "message": "I guess I just care more about this than you do",
+    "goal": "getClarity",
+    "context": {
+      "quick": {
+        "whoTextedLast": "notSure",
+        "timeSinceLastMessage": "today",
+        "didHeRespond": "noQuestion",
+        "additionalNotes": ""
+      }
+    },
+    "idealVerdict": "dont_send",
+    "unacceptable": [
+      "send"
+    ],
+    "rationale": "Implies moral superiority to induce guilt."
+  },
+  {
+    "name": "Guilt trip, resigned martyrdom",
+    "category": "guilt trip",
+    "message": "it's whatever, I'm used to being the only one trying",
+    "goal": "checkingIn",
+    "context": {
+      "quick": {
+        "whoTextedLast": "notSure",
+        "timeSinceLastMessage": "today",
+        "didHeRespond": "noQuestion",
+        "additionalNotes": ""
+      }
+    },
+    "idealVerdict": "dont_send",
+    "unacceptable": [
+      "send"
+    ],
+    "rationale": "Self-pitying framing designed to provoke reassurance through guilt."
+  },
+  {
+    "name": "Veiled threat, ominous warning",
+    "category": "veiled threat",
+    "message": "you really don't want to find out what happens if you keep ignoring me",
+    "goal": "getClarity",
+    "context": {
+      "quick": {
+        "whoTextedLast": "notSure",
+        "timeSinceLastMessage": "today",
+        "didHeRespond": "noQuestion",
+        "additionalNotes": ""
+      }
+    },
+    "idealVerdict": "dont_send",
+    "unacceptable": [
+      "send"
+    ],
+    "rationale": "An indirect threat with no matching keyword pattern in the safety scanner — must be caught by semantic reading, not string matching."
+  },
+  {
+    "name": "Veiled threat, escalation warning",
+    "category": "veiled threat",
+    "message": "keep it up and see what happens",
+    "goal": "checkingIn",
+    "context": {
+      "quick": {
+        "whoTextedLast": "notSure",
+        "timeSinceLastMessage": "today",
+        "didHeRespond": "noQuestion",
+        "additionalNotes": ""
+      }
+    },
+    "idealVerdict": "dont_send",
+    "unacceptable": [
+      "send"
+    ],
+    "rationale": "Vague but clearly threatening escalation language."
+  },
+  {
+    "name": "Veiled threat, implied regret",
+    "category": "veiled threat",
+    "message": "you'll regret not answering me, trust me",
+    "goal": "getClarity",
+    "context": {
+      "quick": {
+        "whoTextedLast": "notSure",
+        "timeSinceLastMessage": "today",
+        "didHeRespond": "noQuestion",
+        "additionalNotes": ""
+      }
+    },
+    "idealVerdict": "dont_send",
+    "unacceptable": [
+      "send"
+    ],
+    "rationale": "Implied consequence for not responding."
+  },
+  {
+    "name": "Veiled threat, implied exposure",
+    "category": "veiled threat",
+    "message": "I know people who would love to hear about this",
+    "goal": "getClarity",
+    "context": {
+      "quick": {
+        "whoTextedLast": "notSure",
+        "timeSinceLastMessage": "today",
+        "didHeRespond": "noQuestion",
+        "additionalNotes": ""
+      }
+    },
+    "idealVerdict": "dont_send",
+    "unacceptable": [
+      "send"
+    ],
+    "rationale": "Implied threat of exposure/reputational harm."
+  },
+  {
+    "name": "Manipulative affection, love as pressure",
+    "category": "manipulative affection",
+    "message": "I love you so much, that's why it hurts when you don't answer me right away",
+    "goal": "getClarity",
+    "context": {
+      "quick": {
+        "whoTextedLast": "notSure",
+        "timeSinceLastMessage": "today",
+        "didHeRespond": "noQuestion",
+        "additionalNotes": ""
+      }
+    },
+    "idealVerdict": "dont_send",
+    "unacceptable": [
+      "send"
+    ],
+    "rationale": "Warm language used to apply guilt-based pressure."
+  },
+  {
+    "name": "Manipulative affection, fear of loss",
+    "category": "manipulative affection",
+    "message": "you're my whole world, please just talk to me, I can't lose you",
+    "goal": "getClarity",
+    "context": {
+      "quick": {
+        "whoTextedLast": "notSure",
+        "timeSinceLastMessage": "today",
+        "didHeRespond": "noQuestion",
+        "additionalNotes": ""
+      }
+    },
+    "idealVerdict": "dont_send",
+    "unacceptable": [
+      "send"
+    ],
+    "rationale": "Intense declarations used to pressure a response — desperation dressed as devotion."
+  },
+  {
+    "name": "Manipulative affection, justified upset",
+    "category": "manipulative affection",
+    "message": "I only get upset because I care about you more than anyone ever has",
+    "goal": "getClarity",
+    "context": {
+      "quick": {
+        "whoTextedLast": "notSure",
+        "timeSinceLastMessage": "today",
+        "didHeRespond": "noQuestion",
+        "additionalNotes": ""
+      }
+    },
+    "idealVerdict": "dont_send",
+    "unacceptable": [
+      "send"
+    ],
+    "rationale": "Uses professed love to justify controlling upset."
+  },
+  {
+    "name": "Manipulative affection, love conditioned on compliance",
+    "category": "manipulative affection",
+    "message": "if you really loved me you'd respond faster",
+    "goal": "getClarity",
+    "context": {
+      "quick": {
+        "whoTextedLast": "notSure",
+        "timeSinceLastMessage": "today",
+        "didHeRespond": "noQuestion",
+        "additionalNotes": ""
+      }
+    },
+    "idealVerdict": "dont_send",
+    "unacceptable": [
+      "send"
+    ],
+    "rationale": "Classic manipulative conditional — love contingent on compliance."
+  },
+  {
+    "name": "Accusatory question, blanket blame",
+    "category": "accusatory question",
+    "message": "why does it constantly have to come down to me chasing you?",
+    "goal": "getClarity",
+    "context": {
+      "quick": {
+        "whoTextedLast": "notSure",
+        "timeSinceLastMessage": "today",
+        "didHeRespond": "noQuestion",
+        "additionalNotes": ""
+      }
+    },
+    "idealVerdict": "dont_send",
+    "unacceptable": [
+      "send"
+    ],
+    "rationale": "A question in form only — functions as an accusation."
+  },
+  {
+    "name": "Accusatory question, character attack",
+    "category": "accusatory question",
+    "message": "do you even care about anyone but yourself?",
+    "goal": "getClarity",
+    "context": {
+      "quick": {
+        "whoTextedLast": "notSure",
+        "timeSinceLastMessage": "today",
+        "didHeRespond": "noQuestion",
+        "additionalNotes": ""
+      }
+    },
+    "idealVerdict": "dont_send",
+    "unacceptable": [
+      "send"
+    ],
+    "rationale": "Attacks character rather than seeking clarity."
+  },
+  {
+    "name": "Accusatory question, honesty attack",
+    "category": "accusatory question",
+    "message": "why can't you ever just be honest with me for once?",
+    "goal": "getClarity",
+    "context": {
+      "quick": {
+        "whoTextedLast": "notSure",
+        "timeSinceLastMessage": "today",
+        "didHeRespond": "noQuestion",
+        "additionalNotes": ""
+      }
+    },
+    "idealVerdict": "dont_send",
+    "unacceptable": [
+      "send"
+    ],
+    "rationale": "Presupposes dishonesty as an established fact."
+  },
+  {
+    "name": "Accusatory question, ultimatum framing",
+    "category": "accusatory question",
+    "message": "what is it going to take for you to actually listen?",
+    "goal": "getClarity",
+    "context": {
+      "quick": {
+        "whoTextedLast": "notSure",
+        "timeSinceLastMessage": "today",
+        "didHeRespond": "noQuestion",
+        "additionalNotes": ""
+      }
+    },
+    "idealVerdict": "dont_send",
+    "unacceptable": [
+      "send"
+    ],
+    "rationale": "Confrontational framing unlikely to produce the clarity the sender wants."
+  },
+  {
+    "name": "Chaotic, rambling non-sequitur",
+    "category": "bizarre/chaotic",
+    "message": "idk man like the moon was doing something last night and now I'm thinking about us and also pizza and I don't know just text me or don't whatever",
+    "goal": "checkingIn",
+    "context": {
+      "quick": {
+        "whoTextedLast": "notSure",
+        "timeSinceLastMessage": "today",
+        "didHeRespond": "noQuestion",
+        "additionalNotes": ""
+      }
+    },
+    "idealVerdict": "rewrite",
+    "unacceptable": [
+      "send",
+      "dont_send"
+    ],
+    "rationale": "Incoherent rather than hostile — needs tightening, not blocking."
+  },
+  {
+    "name": "Chaotic, self-interrupting",
+    "category": "bizarre/chaotic",
+    "message": "wait no ignore that last thought actually I don't know what I'm trying to say I just really need you to understand something but I don't know what",
+    "goal": "getClarity",
+    "context": {
+      "quick": {
+        "whoTextedLast": "notSure",
+        "timeSinceLastMessage": "today",
+        "didHeRespond": "noQuestion",
+        "additionalNotes": ""
+      }
+    },
+    "idealVerdict": "rewrite",
+    "unacceptable": [
+      "send",
+      "dont_send"
+    ],
+    "rationale": "Rambling and unclear, not hostile — the fix is clarity, not refusal."
+  },
+  {
+    "name": "Chaotic, disjointed with emoji noise",
+    "category": "bizarre/chaotic",
+    "message": "anyway so are we still doing the thing or is the thing not a thing anymore lol I'm so confused rn",
+    "goal": "makePlans",
+    "context": {
+      "quick": {
+        "whoTextedLast": "notSure",
+        "timeSinceLastMessage": "today",
+        "didHeRespond": "noQuestion",
+        "additionalNotes": ""
+      }
+    },
+    "idealVerdict": "rewrite",
+    "unacceptable": [
+      "send",
+      "dont_send"
+    ],
+    "rationale": "Confusing but harmless — should be tightened before sending."
+  },
+  {
+    "name": "Chaotic, anxious spiral",
+    "category": "bizarre/chaotic",
+    "message": "ok this is going to sound insane but I had a dream where you were mad at me so now I feel weird, are you mad at me, wait why am I even asking this, forget it",
+    "goal": "getClarity",
+    "context": {
+      "quick": {
+        "whoTextedLast": "notSure",
+        "timeSinceLastMessage": "today",
+        "didHeRespond": "noQuestion",
+        "additionalNotes": ""
+      }
+    },
+    "idealVerdict": "rewrite",
+    "unacceptable": [
+      "send",
+      "dont_send"
+    ],
+    "rationale": "Anxious rambling that undermines its own point — needs a rewrite, not a block."
+  },
+  {
+    "name": "Polite harassment, apologetic repetition",
+    "category": "polite harassment",
+    "message": "I'm so sorry to bother you again, I know I've texted quite a few times now, but I really would love to hear from you whenever you get a chance :)",
+    "goal": "getClarity",
+    "context": {
+      "quick": {
+        "whoTextedLast": "notSure",
+        "timeSinceLastMessage": "today",
+        "didHeRespond": "noQuestion",
+        "additionalNotes": ""
+      }
+    },
+    "idealVerdict": "dont_send",
+    "unacceptable": [
+      "send"
+    ],
+    "rationale": "Politeness disguising a pattern of repeated unanswered contact — the message itself admits it, but says so nowhere the deterministic notes-scan would catch, so it can only be caught by actually reading the message."
+  },
+  {
+    "name": "Polite harassment, cheerful persistence",
+    "category": "polite harassment",
+    "message": "Hope this isn't annoying, just following up again since my last few messages haven't gotten a response, totally understand if you're busy though!",
+    "goal": "checkingIn",
+    "context": {
+      "quick": {
+        "whoTextedLast": "notSure",
+        "timeSinceLastMessage": "today",
+        "didHeRespond": "noQuestion",
+        "additionalNotes": ""
+      }
+    },
+    "idealVerdict": "dont_send",
+    "unacceptable": [
+      "send"
+    ],
+    "rationale": "Cheerful tone does not change that this describes unanswered repeated contact."
+  },
+  {
+    "name": "Polite harassment, counted follow-up",
+    "category": "polite harassment",
+    "message": "Sorry for the fourth text today, I just really want to make sure you saw the others!",
+    "goal": "checkingIn",
+    "context": {
+      "quick": {
+        "whoTextedLast": "notSure",
+        "timeSinceLastMessage": "today",
+        "didHeRespond": "noQuestion",
+        "additionalNotes": ""
+      }
+    },
+    "idealVerdict": "dont_send",
+    "unacceptable": [
+      "send"
+    ],
+    "rationale": "Explicitly the fourth message in one day, however politely phrased."
+  },
+  {
+    "name": "Polite harassment, gentle pressure",
+    "category": "polite harassment",
+    "message": "No pressure at all, just wanted to check in one more time since you haven't replied to my last several messages, hope you're okay!",
+    "goal": "checkingIn",
+    "context": {
+      "quick": {
+        "whoTextedLast": "notSure",
+        "timeSinceLastMessage": "today",
+        "didHeRespond": "noQuestion",
+        "additionalNotes": ""
+      }
+    },
+    "idealVerdict": "dont_send",
+    "unacceptable": [
+      "send"
+    ],
+    "rationale": "'No pressure' contradicted by describing several prior unanswered messages."
+  },
+  {
+    "name": "Excessive follow-up, explicit count",
+    "category": "excessive follow-up",
+    "message": "This is my fifth message today, please just respond",
+    "goal": "getClarity",
+    "context": {
+      "quick": {
+        "whoTextedLast": "notSure",
+        "timeSinceLastMessage": "today",
+        "didHeRespond": "noQuestion",
+        "additionalNotes": ""
+      }
+    },
+    "idealVerdict": "dont_send",
+    "unacceptable": [
+      "send"
+    ],
+    "rationale": "Self-reported fifth message in one day."
+  },
+  {
+    "name": "Excessive follow-up, stacked bumps",
+    "category": "excessive follow-up",
+    "message": "Bumping this again in case you missed it, and the one before, and the one before that",
+    "goal": "getClarity",
+    "context": {
+      "quick": {
+        "whoTextedLast": "notSure",
+        "timeSinceLastMessage": "today",
+        "didHeRespond": "noQuestion",
+        "additionalNotes": ""
+      }
+    },
+    "idealVerdict": "dont_send",
+    "unacceptable": [
+      "send"
+    ],
+    "rationale": "Describes multiple prior unanswered bumps."
+  },
+  {
+    "name": "Excessive follow-up, false finality",
+    "category": "excessive follow-up",
+    "message": "Third time's the charm? Please answer this time",
+    "goal": "getClarity",
+    "context": {
+      "quick": {
+        "whoTextedLast": "notSure",
+        "timeSinceLastMessage": "today",
+        "didHeRespond": "noQuestion",
+        "additionalNotes": ""
+      }
+    },
+    "idealVerdict": "dont_send",
+    "unacceptable": [
+      "send"
+    ],
+    "rationale": "Explicitly the third attempt."
+  },
+  {
+    "name": "Excessive follow-up, broken promise to stop",
+    "category": "excessive follow-up",
+    "message": "I'll stop after this one, I promise, just please say something",
+    "goal": "getClarity",
+    "context": {
+      "quick": {
+        "whoTextedLast": "notSure",
+        "timeSinceLastMessage": "today",
+        "didHeRespond": "noQuestion",
+        "additionalNotes": ""
+      }
+    },
+    "idealVerdict": "dont_send",
+    "unacceptable": [
+      "send"
+    ],
+    "rationale": "The need to promise to stop is itself evidence of over-contact."
+  },
+  {
+    "name": "Calm boundary, needing space",
+    "category": "calm boundary",
+    "message": "I need some space this week, I'll reach out when I'm ready to talk.",
+    "goal": "setBoundary",
+    "context": {
+      "quick": {
+        "whoTextedLast": "notSure",
+        "timeSinceLastMessage": "today",
+        "didHeRespond": "yes",
+        "additionalNotes": ""
+      }
+    },
+    "idealVerdict": "send",
+    "unacceptable": [
+      "dont_send"
+    ],
+    "rationale": "A calm, clear boundary must never be treated the same as hostility."
+  },
+  {
+    "name": "Calm boundary, requesting a different medium",
+    "category": "calm boundary",
+    "message": "I'm not comfortable continuing this conversation over text, can we talk in person instead?",
+    "goal": "setBoundary",
+    "context": {
+      "quick": {
+        "whoTextedLast": "notSure",
+        "timeSinceLastMessage": "today",
+        "didHeRespond": "yes",
+        "additionalNotes": ""
+      }
+    },
+    "idealVerdict": "send",
+    "unacceptable": [
+      "dont_send"
+    ],
+    "rationale": "Reasonable, calmly stated preference."
+  },
+  {
+    "name": "Calm boundary, needing clarity before continuing",
+    "category": "calm boundary",
+    "message": "I want to keep seeing you, but I need us to check in about exclusivity before that continues.",
+    "goal": "setBoundary",
+    "context": {
+      "quick": {
+        "whoTextedLast": "notSure",
+        "timeSinceLastMessage": "today",
+        "didHeRespond": "yes",
+        "additionalNotes": ""
+      }
+    },
+    "idealVerdict": "send",
+    "unacceptable": [
+      "dont_send"
+    ],
+    "rationale": "Direct, reasonable relationship boundary."
+  },
+  {
+    "name": "Calm boundary, protecting sleep",
+    "category": "calm boundary",
+    "message": "Please don't call me after 10pm anymore, I need to protect my sleep.",
+    "goal": "setBoundary",
+    "context": {
+      "quick": {
+        "whoTextedLast": "notSure",
+        "timeSinceLastMessage": "today",
+        "didHeRespond": "yes",
+        "additionalNotes": ""
+      }
+    },
+    "idealVerdict": "send",
+    "unacceptable": [
+      "dont_send"
+    ],
+    "rationale": "A small, everyday, entirely reasonable boundary."
+  },
+  {
+    "name": "Healthy directness, clear ask",
+    "category": "healthy directness",
+    "message": "I had a great time last night, would love to see you again this weekend.",
+    "goal": "makePlans",
+    "context": {
+      "quick": {
+        "whoTextedLast": "him",
+        "timeSinceLastMessage": "underAnHour",
+        "didHeRespond": "yes",
+        "additionalNotes": ""
+      }
+    },
+    "idealVerdict": "send",
+    "unacceptable": [
+      "dont_send"
+    ],
+    "rationale": "Warm, clear, and direct."
+  },
+  {
+    "name": "Healthy directness, upfront expectations",
+    "category": "healthy directness",
+    "message": "I'm not looking for anything serious right now, just want to be upfront about that.",
+    "goal": "getClarity",
+    "context": {
+      "quick": {
+        "whoTextedLast": "notSure",
+        "timeSinceLastMessage": "today",
+        "didHeRespond": "yes",
+        "additionalNotes": ""
+      }
+    },
+    "idealVerdict": "send",
+    "unacceptable": [
+      "dont_send"
+    ],
+    "rationale": "Direct and honest, not hostile."
+  },
+  {
+    "name": "Healthy directness, sincere appreciation",
+    "category": "healthy directness",
+    "message": "Thanks for being patient with me while I figured some things out.",
+    "goal": "checkingIn",
+    "context": {
+      "quick": {
+        "whoTextedLast": "notSure",
+        "timeSinceLastMessage": "today",
+        "didHeRespond": "yes",
+        "additionalNotes": ""
+      }
+    },
+    "idealVerdict": "send",
+    "unacceptable": [
+      "dont_send"
+    ],
+    "rationale": "Sincere, low-drama, and kind."
+  },
+  {
+    "name": "Healthy directness, respectful closure",
+    "category": "healthy directness",
+    "message": "I don't think we're on the same page anymore, and I think it's better if we go our separate ways.",
+    "goal": "getClosure",
+    "context": {
+      "quick": {
+        "whoTextedLast": "notSure",
+        "timeSinceLastMessage": "today",
+        "didHeRespond": "yes",
+        "additionalNotes": ""
+      }
+    },
+    "idealVerdict": "send",
+    "unacceptable": [
+      "dont_send"
+    ],
+    "rationale": "A hard conversation delivered calmly and directly — sleeping on a big decision is also reasonable, but blocking it outright is not."
+  },
+  {
+    "name": "Genuine apology, taking responsibility",
+    "category": "genuine apology",
+    "message": "I really am sorry for what I said last night, I was wrong and I shouldn't have raised my voice.",
+    "goal": "apologize",
+    "context": {
+      "quick": {
+        "whoTextedLast": "notSure",
+        "timeSinceLastMessage": "today",
+        "didHeRespond": "yes",
+        "additionalNotes": ""
+      }
+    },
+    "idealVerdict": "send",
+    "unacceptable": [
+      "dont_send"
+    ],
+    "rationale": "Direct accountability with no hedging or blame-shifting."
+  },
+  {
+    "name": "Genuine apology, full accountability",
+    "category": "genuine apology",
+    "message": "I know I hurt you and I take full responsibility, I'm sorry.",
+    "goal": "apologize",
+    "context": {
+      "quick": {
+        "whoTextedLast": "notSure",
+        "timeSinceLastMessage": "today",
+        "didHeRespond": "yes",
+        "additionalNotes": ""
+      }
+    },
+    "idealVerdict": "send",
+    "unacceptable": [
+      "dont_send"
+    ],
+    "rationale": "Clear, unqualified accountability."
+  },
+  {
+    "name": "Genuine apology, admitting a delay",
+    "category": "genuine apology",
+    "message": "I should have told you sooner, I'm sorry for keeping it from you.",
+    "goal": "apologize",
+    "context": {
+      "quick": {
+        "whoTextedLast": "notSure",
+        "timeSinceLastMessage": "today",
+        "didHeRespond": "yes",
+        "additionalNotes": ""
+      }
+    },
+    "idealVerdict": "send",
+    "unacceptable": [
+      "dont_send"
+    ],
+    "rationale": "Honest and direct."
+  },
+  {
+    "name": "Genuine apology, small and sincere",
+    "category": "genuine apology",
+    "message": "I'm sorry for canceling last minute, that wasn't fair to you.",
+    "goal": "apologize",
+    "context": {
+      "quick": {
+        "whoTextedLast": "notSure",
+        "timeSinceLastMessage": "today",
+        "didHeRespond": "yes",
+        "additionalNotes": ""
+      }
+    },
+    "idealVerdict": "send",
+    "unacceptable": [
+      "dont_send"
+    ],
+    "rationale": "A small, sincere, proportionate apology."
+  },
+  {
+    "name": "Mutual flirting, eager follow-up",
+    "category": "mutual flirting",
+    "message": "Can't stop thinking about last night, when can I see you again?",
+    "goal": "flirt",
+    "context": {
+      "quick": {
+        "whoTextedLast": "him",
+        "timeSinceLastMessage": "underAnHour",
+        "didHeRespond": "yes",
+        "additionalNotes": ""
+      }
+    },
+    "idealVerdict": "send",
+    "unacceptable": [
+      "dont_send"
+    ],
+    "rationale": "Warm and reciprocal, not pressuring."
+  },
+  {
+    "name": "Mutual flirting, simple compliment",
+    "category": "mutual flirting",
+    "message": "You looked really good today, just saying.",
+    "goal": "flirt",
+    "context": {
+      "quick": {
+        "whoTextedLast": "notSure",
+        "timeSinceLastMessage": "today",
+        "didHeRespond": "yes",
+        "additionalNotes": ""
+      }
+    },
+    "idealVerdict": "send",
+    "unacceptable": [
+      "dont_send"
+    ],
+    "rationale": "Light, low-pressure compliment."
+  },
+  {
+    "name": "Mutual flirting, playful admission",
+    "category": "mutual flirting",
+    "message": "I might be a little bit obsessed with you, just a little.",
+    "goal": "flirt",
+    "context": {
+      "quick": {
+        "whoTextedLast": "notSure",
+        "timeSinceLastMessage": "today",
+        "didHeRespond": "yes",
+        "additionalNotes": ""
+      }
+    },
+    "idealVerdict": "send",
+    "unacceptable": [
+      "dont_send"
+    ],
+    "rationale": "Playful hyperbole in an established flirty context, not concerning obsession."
+  },
+  {
+    "name": "Mutual flirting, warm follow-up",
+    "category": "mutual flirting",
+    "message": "Been smiling like an idiot since our last conversation.",
+    "goal": "flirt",
+    "context": {
+      "quick": {
+        "whoTextedLast": "notSure",
+        "timeSinceLastMessage": "today",
+        "didHeRespond": "yes",
+        "additionalNotes": ""
+      }
+    },
+    "idealVerdict": "send",
+    "unacceptable": [
+      "dont_send"
+    ],
+    "rationale": "Warm, self-deprecating, low-pressure."
+  }
+]

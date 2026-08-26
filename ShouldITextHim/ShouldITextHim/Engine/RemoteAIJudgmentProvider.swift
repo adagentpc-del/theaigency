@@ -4,14 +4,18 @@ import Foundation
 /// production. Runs the same local safety and mechanical pre-filters as
 /// `LocalJudgmentProvider` first (fast, free, and safety-critical
 /// regardless of network availability — see `AI_SAFETY.md`), then calls
-/// theAIgincy's own server-side proxy for genuine semantic judgment of
+/// theAIgincy's own application API for genuine semantic judgment of
 /// anything those filters don't confidently resolve: hostility, sarcasm,
 /// passive aggression, manipulation, guilt-tripping, veiled threats, and
 /// the rest of the "Product Behavior" list in `AI_SAFETY.md`.
 ///
-/// No API key for the model provider is ever compiled into this app —
-/// the proxy holds it server-side. See `API_CONTRACT.md` for the full
-/// contract and `server/README.md` for how the proxy itself is deployed.
+/// This app never talks to a model or inference server directly — only to
+/// theAIgincy's own `/api/judge` endpoint, which in turn talks privately
+/// to a self-hosted local language model (`server/`). No third-party
+/// hosted-AI API key, and no local-inference infrastructure secret, is
+/// ever compiled into this app. See `API_CONTRACT.md` for the full
+/// contract and `server/README.md` for how the backend itself is
+/// deployed and secured.
 struct RemoteAIJudgmentProvider: JudgmentProvider {
     /// Public, non-secret endpoint — safe to embed in the client, since it
     /// is a URL, not a credential. **Placeholder** until the proxy is
@@ -121,14 +125,15 @@ private struct RemoteJudgmentResponseDTO: Decodable {
 }
 
 private extension Verdict {
-    /// The wire contract uses `dont_send` (snake_case), not Swift's
-    /// `dontSend` raw value.
+    /// The wire contract uses snake_case (`dont_send`, `need_context`),
+    /// not Swift's `dontSend`/`needContext` raw values.
     init?(wireValue: String) {
         switch wireValue {
         case "send": self = .send
         case "rewrite": self = .rewrite
         case "sleep": self = .sleep
         case "dont_send": self = .dontSend
+        case "need_context": self = .needContext
         default: return nil
         }
     }

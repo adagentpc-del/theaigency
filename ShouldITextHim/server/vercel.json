@@ -1,7 +1,0 @@
-{
-  "functions": {
-    "api/judge.ts": {
-      "maxDuration": 15
-    }
-  }
-}

@@ -4,7 +4,9 @@ This document describes exactly what the shipped code does. It is the source of 
 
 ## Revision note (semantic judgment architecture)
 
-A second QA pass found that the fully on-device, keyword-based engine could not reliably judge hostility, sarcasm, manipulation, or profanity outside a fixed phrase list (see `DECISIONS.md`). The fix required making **primary** judgment semantic, via a server-side proxy calling a hosted AI model. This is the first version of this app where user-entered content leaves the device in normal operation — everything below reflects that honestly. Safety-critical routing and a few structural checks still happen fully on-device first and never require the network (see "What leaves the device").
+A second QA pass found that the fully on-device, keyword-based engine could not reliably judge hostility, sarcasm, manipulation, or profanity outside a fixed phrase list (see `DECISIONS.md`). The fix required making **primary** judgment semantic, via theAIgincy's own application API. This is the first version of this app where user-entered content leaves the device in normal operation — everything below reflects that honestly. Safety-critical routing and a few structural checks still happen fully on-device first and never require the network (see "What leaves the device").
+
+**Second revision note**: the backend behind that application API changed from a hosted third-party AI provider to a **self-hosted local language model** run on theAIgincy's own infrastructure (see `DECISIONS.md` decision 18). What data leaves the device, and why, is unchanged by this — the difference is entirely about which infrastructure processes it after it reaches theAIgincy's own server, and that no third party (a hosted-AI provider) is involved at all any more.
 
 ## What the user enters
 
@@ -17,13 +19,13 @@ Across the 3-step input flow:
 ## What remains on-device
 
 - **Not** written to `UserDefaults`, any file, database, or cache, on-device or server-side.
-- **Not** logged via `print`, `os_log`, or any crash/analytics tool on-device, and — per `server/api/judge.ts` — never logged with content server-side either (only an error *type*, e.g. `"timeout"`, is ever logged, never the message).
+- **Not** logged via `print`, `os_log`, or any crash/analytics tool on-device, and — per `server/src/routes/judge.ts` — never logged with content server-side either (only an error *type*, e.g. `"timeout"`, is ever logged, never the message).
 - Cleared from the app's memory whenever the user taps START OVER or force-quits/relaunches the app (nothing survives process death — there is no persistence layer to survive it). `JudgeViewModel.reset()` clears the message, the selected goal, the context method, the pasted conversation, and all quick-context answers together.
-- The server (`server/api/judge.ts`) is a stateless function with no database — a request's content exists only for the duration of that single request/response cycle, then is gone.
+- The server (`server/src/routes/judge.ts`) writes nothing to a database or disk — a request's content exists only for the duration of that single request/response cycle, then is gone.
 
 ## What leaves the device
 
-**Only when semantic judgment actually runs**, and only the three fields that make up a `JudgmentRequest`: the proposed message, the selected goal, and whichever context was provided (pasted conversation or quick-context answers). Sent over HTTPS to theAIgincy's own server-side proxy (`server/`), which forwards a constructed prompt to the Claude API to obtain a judgment, then returns only the structured verdict/reason/rewrite fields — never anything the model provider wouldn't need. See `API_CONTRACT.md` for the exact wire contract.
+**Only when semantic judgment actually runs**, and only the three fields that make up a `JudgmentRequest`: the proposed message, the selected goal, and whichever context was provided (pasted conversation or quick-context answers). Sent over HTTPS to theAIgincy's own application API (`server/`), which constructs a prompt and sends it to a **self-hosted local language model** (running on theAIgincy's own infrastructure — see `server/README.md`'s architecture diagram) to obtain a judgment, then returns only the structured verdict/reason/rewrite fields — never anything the model wouldn't need. See `API_CONTRACT.md` for the exact wire contract.
 
 **Nothing leaves the device when:**
 - Deterministic safety rules (`SafetyScanner`) or mechanical rules (`DeterministicJudgmentRules`) resolve the request confidently — these always run first, entirely on-device, for every request, regardless of network availability (see `AI_SAFETY.md`). A meaningful fraction of requests (anything with a repeated-contact disclosure, a clear breakup-topic message, a very long message, or obvious double-texting) never reach the network at all.
@@ -33,13 +35,13 @@ No device identifiers, advertising identifiers, account identifiers (there is no
 
 ## Which service receives data
 
-- **theAIgincy's own server-side proxy** (`server/`, deployed by the founder — see `server/README.md`), which is the only network endpoint this app ever calls.
-- That proxy, in turn, sends a constructed prompt (built from the request's content) to **Anthropic's Claude API** to obtain the judgment. Anthropic processes that request per its own API terms; theAIgincy's proxy does not persist it, and per `server/README.md` never logs its content.
+- **theAIgincy's own application API** (`server/`, deployed by the founder — see `server/README.md`), which is the only network endpoint this app ever calls.
+- That API, in turn, sends a constructed prompt (built from the request's content) to a **self-hosted local language model** running on theAIgincy's own infrastructure — never a third-party hosted-AI provider. No company outside theAIgincy ever receives the proposed message, pasted conversation, or context notes.
 - No other third party receives any data. There is no analytics SDK, no ad SDK, and no other backend.
 
 ## Identifiers transmitted
 
-None. The request body is exactly `{ proposedMessage, goal, context }` — no device ID, no advertising ID, no account ID (there is no account), no IP-linked identifier added by the client. (The proxy will incidentally see the calling IP address as part of ordinary HTTP, as any server does — it is not logged or stored; see "Known limitation: abuse mitigation" in `server/README.md`.)
+None. The request body is exactly `{ proposedMessage, goal, context }` — no device ID, no advertising ID, no account ID (there is no account), no IP-linked identifier added by the client. (The application API will incidentally see the calling IP address as part of ordinary HTTP, as any server does, and uses it only in-memory for basic per-IP rate limiting — it is not logged or stored; see "Security" in `server/README.md`.)
 
 ## Analytics
 
@@ -56,12 +58,12 @@ None. No IAP is implemented in this release (see `DECISIONS.md`). If a one-time 
 ## Retention
 
 - **On-device**: nothing is retained — no field from any of the three input steps outlives the current session.
-- **Server-side**: nothing is retained — `server/api/judge.ts` is a stateless function with no database; a request's content exists only in memory for the duration of that one request.
-- **At the model provider (Anthropic)**: governed by Anthropic's own API data-handling terms, not by this app. theAIgincy's proxy does not request or configure any extended retention beyond Anthropic's standard API terms.
+- **Server-side**: nothing is retained — `server/src/routes/judge.ts` writes nothing to a database or file; a request's content exists only in memory for the duration of that one request.
+- **At the model**: the self-hosted local model processes each request independently and retains nothing between requests — there is no third-party provider retention policy to account for, since theAIgincy operates the entire inference pipeline itself.
 
 ## Deletion
 
-Not applicable — there is no account and nothing persisted anywhere in the pipeline (device, proxy, or otherwise) to delete. Force-quitting the app discards everything held in its memory.
+Not applicable — there is no account and nothing persisted anywhere in the pipeline (device, application API, or self-hosted model) to delete. Force-quitting the app discards everything held in its memory.
 
 ## Permissions requested
 

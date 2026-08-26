@@ -21,7 +21,7 @@ The first build judged the pasted message in isolation and, in real QA, defaulte
 
 So judgment is now a 4-step flow, and **judgment never runs until all three inputs exist.**
 
-A second QA pass then found that goal and context alone weren't enough either: a purely keyword-based engine still couldn't recognize hostility, sarcasm, or manipulation outside a fixed phrase list (`"hello gangster what the fuck is your problem"` returned SEND IT). Primary judgment is now genuinely semantic — a real AI model, called through theAIgincy's own server-side proxy, reads the actual message/goal/context. Safety routing and a few structural checks (repeated contact, double-texting, message length, breakup topic) still run entirely on-device first and never depend on the network. See `DECISIONS.md` for the full engineering rationale and `AI_SAFETY.md`/`API_CONTRACT.md` for the architecture.
+A second QA pass then found that goal and context alone weren't enough either: a purely keyword-based engine still couldn't recognize hostility, sarcasm, or manipulation outside a fixed phrase list (`"hello gangster what the fuck is your problem"` returned SEND IT). Primary judgment is now genuinely semantic — a real AI model, self-hosted on theAIgincy's own infrastructure and called through theAIgincy's own application API, reads the actual message/goal/context. Safety routing and a few structural checks (repeated contact, double-texting, message length, breakup topic) still run entirely on-device first and never depend on the network. See `DECISIONS.md` for the full engineering rationale and `AI_SAFETY.md`/`API_CONTRACT.md` for the architecture.
 
 ## Screens
 
@@ -62,7 +62,7 @@ The **JUDGE MY TEXT** CTA is disabled until either Option A has non-blank text o
 
 ### Step 4 — Judgment (`VerdictView`)
 
-Runs only after message + goal + context are all present (`JudgeViewModel.submitContext()`). One of the four verdicts, unchanged:
+Runs only after message + goal + context are all present (`JudgeViewModel.submitContext()`). One of five verdicts:
 
 | Verdict | Symbol | Color |
 |---|---|---|
@@ -70,10 +70,13 @@ Runs only after message + goal + context are all present (`JudgeViewModel.submit
 | REWRITE IT. | `pencil.line` | orange |
 | SLEEP ON IT. | `moon.zzz.fill` | blue |
 | DON'T SEND IT. | `hand.raised.fill` | red |
+| NEED MORE CONTEXT. | `questionmark.circle.fill` | purple |
 
 A small "Goal: <goal>" caption is shown above the verdict for transparency about what the app judged against. The reason explicitly connects the verdict to goal and/or context (e.g. *"You already asked a direct question and haven't gotten an answer. Another casual check-in probably won't get you the clarity you're looking for."* — see `PRODUCT_SPEC.md`'s worked example reproduced exactly in `ACCEPTANCE_CRITERIA.md` and the fixture suite).
 
-Controls: **HELP ME REWRITE IT** (hidden for safety-routed results), **START OVER**, and a privacy-safe text share (hidden for safety-routed results).
+**NEED MORE CONTEXT** is a deliberate, first-class answer, not an error state — see `AI_SAFETY.md`. It means the model has enough to understand the message and goal but not enough supplied context to responsibly say whether sending now is advisable, and it is the preferred answer over guessing in either direction. It never comes from absence of a detected problem; it only comes from the model explicitly saying so.
+
+Controls: **HELP ME REWRITE IT** (hidden for safety-routed results and for NEED MORE CONTEXT), **START OVER**, and a privacy-safe text share (hidden for safety-routed results and for NEED MORE CONTEXT). NEED MORE CONTEXT additionally shows **ADD MORE CONTEXT**, which returns to Step 3 with the message, goal, and any context already entered intact — never a dead end.
 
 ### Rewrite Result (`RewriteResultView`)
 
@@ -85,7 +88,7 @@ Unchanged: funny, sharp, confident, concise, socially aware, non-clinical. The a
 
 ## Data behavior
 
-No account, no history, no cloud sync, no persistence anywhere in the pipeline. This is the first release where user content leaves the device in normal operation — the proposed message, goal, and context are sent to theAIgincy's server to obtain a semantic judgment (see "Why a 3-step flow" above and `API_CONTRACT.md`). Safety-flagged and repeated-contact-flagged requests never leave the device at all. Nothing is logged or stored anywhere in the pipeline (device, proxy, or model provider) — see `PRIVACY_DATA_MAP.md` for the full, updated data map.
+No account, no history, no cloud sync, no persistence anywhere in the pipeline. Since the second QA repair, user content leaves the device in normal operation — the proposed message, goal, and context are sent to theAIgincy's own application API, which forwards them to a self-hosted local language model (no third-party AI provider) to obtain a semantic judgment (see "Why a 3-step flow" above and `API_CONTRACT.md`). Safety-flagged and repeated-contact-flagged requests never leave the device at all. Nothing is logged or stored anywhere in the pipeline (device, application API, or the self-hosted model) — see `PRIVACY_DATA_MAP.md` for the full, updated data map.
 
 ## Monetization
 
@@ -104,6 +107,7 @@ Unchanged: free at launch, no subscriptions, no IAP in this release.
 - Identical proposed message with different context produces different verdicts — this is the core regression test in `LocalJudgmentProviderFixtureTests` proving the first reported defect is fixed.
 - Hostile/manipulative messages that match no keyword pattern (e.g. the exact profanity regression from the second QA pass) never return SEND IT — see `AI_SAFETY.md` and `AdversarialSemanticFixtureTests`.
 - AI judgment service unavailable (offline, timeout, invalid response) → a conservative local result, clearly labeled as limited, with a retry option — never a confident-looking guess.
+- Supplied context too thin to responsibly judge, even though the message and goal are clear → NEED MORE CONTEXT with an ADD MORE CONTEXT control back to Step 3, never a guessed SEND IT or DON'T SEND IT — see `AI_SAFETY.md`.
 
 ## Explicitly out of scope for this iteration
 

@@ -154,6 +154,15 @@ final class JudgeViewModel {
         await submitContext()
     }
 
+    /// Returns to Step 3 after a NEED MORE CONTEXT verdict, so the user can
+    /// add detail without losing the message or goal they already entered.
+    /// Everything already typed into Step 3 (pasted conversation or quick
+    /// answers) is untouched — only `reset()` clears those.
+    func returnToAddContext() {
+        guard case .verdict = phase else { return }
+        phase = .context
+    }
+
     func reset() {
         proposedMessage = ""
         selectedGoal = nil

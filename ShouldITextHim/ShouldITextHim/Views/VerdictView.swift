@@ -13,6 +13,17 @@ struct VerdictView: View {
         result.recommendedAction == .direct ? "SEND SOMETHING DIRECT" : "HELP ME REWRITE IT"
     }
 
+    /// NEED MORE CONTEXT isn't a real verdict on the message yet — there's
+    /// nothing to rewrite or share until the user adds detail, so both
+    /// controls are replaced by a single "add more context" action.
+    private var showsRewriteControl: Bool {
+        !result.isSafetyRouted && result.verdict != .needContext
+    }
+
+    private var showsShareControl: Bool {
+        !result.isSafetyRouted && result.verdict != .needContext
+    }
+
     var body: some View {
         VStack(spacing: 20) {
             Text("Goal: \(request.goal.title)")
@@ -48,7 +59,22 @@ struct VerdictView: View {
             Spacer(minLength: 4)
 
             VStack(spacing: 12) {
-                if !result.isSafetyRouted {
+                if result.verdict == .needContext {
+                    Button {
+                        Haptics.tap()
+                        viewModel.returnToAddContext()
+                    } label: {
+                        Text("ADD MORE CONTEXT")
+                            .fontWeight(.bold)
+                            .frame(maxWidth: .infinity)
+                            .frame(minHeight: Theme.minimumTapTarget)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.large)
+                    .accessibilityHint("Go back and add more detail about what happened before this message")
+                }
+
+                if showsRewriteControl {
                     Button {
                         Haptics.tap()
                         viewModel.startRewrite()
@@ -74,7 +100,7 @@ struct VerdictView: View {
                 .buttonStyle(.bordered)
                 .controlSize(.large)
 
-                if !result.isSafetyRouted {
+                if showsShareControl {
                     ShareLink(item: shareText) {
                         Label("Share result", systemImage: "square.and.arrow.up")
                             .frame(minHeight: Theme.minimumTapTarget)

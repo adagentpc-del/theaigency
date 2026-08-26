@@ -95,13 +95,17 @@ AI provider (see PRIVACY_DATA_MAP.md in the source repo for full
 detail).
 
 Primary judgment is AI-generated: the proposed message, goal, and
-context are sent over HTTPS to our own server, which prompts an
-AI model (Claude, via the Anthropic API) and returns a short,
-structured result — a verdict, a one-to-two-sentence reason, and
-up to 3 optional rewrite suggestions. The model's output is
-schema-validated before it is ever displayed; there is no
+context are sent over HTTPS to our own server, which prompts a
+self-hosted local language model (run entirely on our own
+infrastructure — no third-party AI provider is involved) and
+returns a short, structured result — a verdict, a one-to-two-sentence
+reason, and up to 3 optional rewrite suggestions. The model's output
+is schema-validated before it is ever displayed; there is no
 open-ended chat, and the app never presents unvalidated or
-free-form AI output to the user.
+free-form AI output to the user. When the model doesn't have enough
+information to responsibly judge a message, it can return "I need
+more context" instead of guessing — this is a normal, expected
+result, not an error.
 
 Two things always happen fully on-device first, before anything
 is sent to our server, and work even offline: (1) a deterministic
@@ -150,6 +154,6 @@ All screenshots must be captured from the actual running app on the target devic
 
 ## What this app does and does not claim
 
-**Now accurate to claim**: the app uses AI to judge messages — a real hosted model, called through theAIgincy's own server, reads the message/goal/context (see `AI_SAFETY.md`, `API_CONTRACT.md`). Marketing copy can say "AI-powered" honestly now; it could not in the previous, fully-local release.
+**Now accurate to claim**: the app uses AI to judge messages — a real model, self-hosted on theAIgincy's own infrastructure and called through theAIgincy's own server, reads the message/goal/context (see `AI_SAFETY.md`, `API_CONTRACT.md`). Marketing copy can say "AI-powered" honestly now; it could not in the original, fully-local release.
 
-**Still must never claim**: no therapy/counseling/legal/medical claim, no claim of certainty about another person's intentions, motives, or character (the AI is explicitly instructed against this — see `server/lib/prompt.ts`), no claim that nothing ever leaves the device (it does, for the AI-judged path — see `PRIVACY_DATA_MAP.md`). Marketing copy must stay inside these lines.
+**Still must never claim**: no therapy/counseling/legal/medical claim, no claim of certainty about another person's intentions, motives, or character (the model is explicitly instructed against this — see `server/src/lib/prompt.ts`), no claim that nothing ever leaves the device (it does, for the AI-judged path — see `PRIVACY_DATA_MAP.md`), and no claim that a specific named third-party AI company (Anthropic, OpenAI, or any other) powers the app — it does not; the model is self-hosted. Marketing copy must stay inside these lines.

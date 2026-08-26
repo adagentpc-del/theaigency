@@ -97,6 +97,21 @@ final class RemoteAIJudgmentProviderTests: XCTestCase {
         XCTAssertEqual(result.rewriteOptions.map(\.text), ["A calmer version."])
     }
 
+    func testNeedContextWireValueMapsToNeedContextVerdict() async {
+        MockURLProtocol.requestHandler = jsonResponse([
+            "verdict": "need_context",
+            "reason": "There isn't enough here to judge whether sending now makes sense.",
+            "recommended_action": "add_context",
+            "rewrite_options": [],
+        ])
+        let provider = makeProvider()
+        let result = await provider.judge(quickRequest())
+        XCTAssertEqual(result.verdict, .needContext)
+        XCTAssertEqual(result.recommendedAction, .addContext)
+        XCTAssertTrue(result.rewriteOptions.isEmpty)
+        XCTAssertFalse(result.isLocalFallback)
+    }
+
     func testRewriteOptionsAreTrimmedFilteredAndCappedAtThree() async {
         MockURLProtocol.requestHandler = jsonResponse([
             "verdict": "rewrite",

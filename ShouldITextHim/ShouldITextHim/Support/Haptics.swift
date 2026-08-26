@@ -13,7 +13,7 @@ enum Haptics {
         switch verdict {
         case .send:
             generator.notificationOccurred(.success)
-        case .rewrite, .sleep:
+        case .rewrite, .sleep, .needContext:
             generator.notificationOccurred(.warning)
         case .dontSend:
             generator.notificationOccurred(.error)

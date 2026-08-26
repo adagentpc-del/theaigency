@@ -1,0 +1,38 @@
+# Example self-hosted deployment: the application API colocated with an
+# Ollama inference server on one private Docker network. Copy this file
+# to docker-compose.yml, adjust LOCAL_LLM_MODEL to whichever model your
+# benchmark picked (see scripts/benchmark.ts), then `docker compose up -d`.
+#
+# The key security property this file demonstrates: `ollama` has no
+# published host port (`expose`, not `ports`) — it is reachable ONLY by
+# the `api` service over the compose-internal network, never from the
+# host or the public internet. `api` is the only service with a
+# published port, and in real production that port sits behind a reverse
+# proxy/TLS terminator (Caddy, nginx, Cloudflare Tunnel, etc.) — this
+# file does not include one, since the right choice depends on your
+# hosting environment.
+
+services:
+  ollama:
+    image: ollama/ollama:latest
+    volumes:
+      - ollama-data:/root/.ollama
+    expose:
+      - "11434"
+    restart: unless-stopped
+
+  api:
+    build: .
+    environment:
+      - NODE_ENV=production
+      - LOCAL_LLM_BASE_URL=http://ollama:11434/v1
+      - LOCAL_LLM_MODEL=qwen3:4b
+      - PORT=3000
+    ports:
+      - "3000:3000" # put a reverse proxy / TLS terminator in front of this in real production
+    depends_on:
+      - ollama
+    restart: unless-stopped
+
+volumes:
+  ollama-data:

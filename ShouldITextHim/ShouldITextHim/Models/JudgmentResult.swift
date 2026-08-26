@@ -20,6 +20,9 @@ enum RecommendedAction: String, Codable, Hashable {
     case wait
     case rewrite
     case direct
+    /// Wire value is `add_context` (snake_case) — explicit raw value since
+    /// Swift's auto-synthesis would otherwise use `addContext`.
+    case addContext = "add_context"
 }
 
 /// The structured result of judging a single message. This is the local

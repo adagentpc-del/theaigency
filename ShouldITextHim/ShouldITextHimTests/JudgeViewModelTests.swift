@@ -192,6 +192,42 @@ final class JudgeViewModelTests: XCTestCase {
         XCTAssertEqual(vm.phase, .message)
     }
 
+    // MARK: - Need more context
+
+    func testReturnToAddContextGoesBackToContextStepPreservingEntries() async {
+        let needContextResult = JudgmentResult(
+            verdict: .needContext,
+            reason: "Not enough here to judge yet.",
+            recommendedAction: .addContext
+        )
+        let vm = makeViewModel(result: needContextResult)
+        vm.proposedMessage = "Hey, can we talk?"
+        vm.proceedToGoal()
+        vm.selectGoal(.getClarity)
+        vm.contextMethod = .quick
+        vm.quickWhoTextedLast = .notSure
+        vm.quickTimeSinceLastMessage = .today
+        vm.quickDidHeRespond = .noQuestion
+        await vm.submitContext()
+
+        guard case .verdict(_, let result) = vm.phase else {
+            return XCTFail("Expected verdict phase")
+        }
+        XCTAssertEqual(result.verdict, .needContext)
+
+        vm.returnToAddContext()
+        XCTAssertEqual(vm.phase, .context)
+        // Everything already entered survives the trip back.
+        XCTAssertEqual(vm.proposedMessage, "Hey, can we talk?")
+        XCTAssertEqual(vm.quickWhoTextedLast, .notSure)
+    }
+
+    func testReturnToAddContextOnlyWorksFromVerdict() {
+        let vm = makeViewModel()
+        vm.returnToAddContext()
+        XCTAssertEqual(vm.phase, .message)
+    }
+
     // MARK: - Reset / relaunch
 
     func testResetClearsEveryStepsState() async {

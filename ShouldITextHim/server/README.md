@@ -1,58 +1,135 @@
 # Judgment Server — Should I Text Him?
 
-A single serverless endpoint, `POST /api/judge`, that holds the model provider's API key server-side and returns strict structured judgment JSON to the iOS client. This is the "smallest secure endpoint needed for this app" — see `../DECISIONS.md` and `../API_CONTRACT.md` for why it exists and how the client talks to it.
+The application API that sits between the iOS app and a **self-hosted local language model**. This project has never used, and does not use, any third-party hosted-AI provider (Anthropic, OpenAI, or otherwise) — there is no such API key anywhere in this codebase. See `../DECISIONS.md` decision 18 for why, and `../API_CONTRACT.md` for the full wire contract.
 
-**Nothing about this endpoint is secret except the environment variable holding the API key.** The endpoint URL itself is public and safe to embed in the client — that's the whole point of the client/server split described in the Day 1 product brief: *never put the model API key in the iOS binary.*
+## Target architecture
+
+```
+iOS App
+    ↓ HTTPS
+Secure ShouldITextHim API   (this project)
+    ↓ private/local connection
+Self-hosted inference server   (llama.cpp server or Ollama)
+    ↓
+Local model   (e.g. qwen3:8b, qwen3:4b, llama3.2:3b)
+```
+
+The iOS app **never** connects to the inference server (llama.cpp/Ollama) directly — it only ever knows this API's public `/api/judge` URL. This API, in turn, talks to the inference server over a private/local connection that must never be exposed to the public internet on its own (see "Security" below).
 
 ## What it does
 
-1. Receives `{ proposedMessage, goal, context }` (exact shape: `lib/schema.ts` → `JudgmentRequestSchema`).
-2. Validates it strictly (Zod) — rejects anything malformed or oversized before it ever reaches the model.
-3. Calls the Claude Messages API (`claude-opus-5`) with a fixed system prompt (`lib/prompt.ts`) and structured-output validation (`output_config.format` via `zodOutputFormat`), so the model's response is constrained to the exact schema in `JudgmentResponseSchema`.
-4. Re-validates the model's output server-side (belt-and-suspenders — the client validates independently too, per `API_CONTRACT.md`).
-5. Returns `{ verdict, reason, recommended_action, rewrite_options }` as JSON.
+1. Receives `{ proposedMessage, goal, context }` (exact shape: `src/lib/schema.ts` → `JudgmentRequestSchema`).
+2. Validates it strictly (Zod) and rate-limits the caller — rejects anything malformed, oversized, or over-limit before it ever reaches the model.
+3. Calls your configured local inference server's OpenAI-compatible `/v1/chat/completions` endpoint (`src/lib/localInferenceClient.ts`) with a fixed system prompt (`src/lib/prompt.ts`) and, where the server supports it, constrained/schema-guided JSON output.
+4. Parses and strictly re-validates the model's output against the exact response schema — malformed JSON, a missing field, or an out-of-enum value is rejected, never passed through.
+5. Returns `{ verdict, reason, recommended_action, rewrite_options }` as JSON. The client independently re-validates again on receipt — see `../ShouldITextHim/Engine/RemoteAIJudgmentProvider.swift`.
 
 ## What it deliberately does NOT do
 
-- **No logging of request or response content.** `api/judge.ts` only ever logs an error *type* (e.g. `"judge_error: timeout"`), never the proposed message, pasted conversation, or model output.
-- **No persistence.** This is a stateless function — no database, no file writes, nothing written anywhere between requests.
-- **No authentication/rate-limiting beyond basic request-size validation.** This is a known, documented tradeoff for a Day 1/2 experiment — see "Known limitation: abuse mitigation" below before this app has real production traffic.
-- **No CORS configuration.** The iOS client calls this directly via `URLSession`, not from a browser, so no `Access-Control-Allow-Origin` handling is needed. If a web client is ever added, CORS will need to be configured then.
+- **No logging of request or response content.** Every log line in this codebase is an error *type* string (e.g. `"judge_error: timeout"`), never the proposed message, pasted conversation, context notes, or the model's output.
+- **No persistence.** Nothing is written to a database or file between requests — a request's content exists only in memory for that one request/response cycle.
+- **No generic error detail returned to the client.** Every failure path returns a small, fixed `{ error: "..." }` shape — never a stack trace or internal exception message.
 
-## Deploying (Vercel — recommended)
+## Local development vs. production
 
-This is written as a [Vercel](https://vercel.com) serverless function because it requires zero infrastructure setup beyond `vercel deploy` and gives you built-in HTTPS, environment variable management, and a generous free tier. Any Node-compatible serverless platform (Cloudflare Workers with adaptation, AWS Lambda via a thin adapter, Fly.io, etc.) would also work — the `api/judge.ts` handler itself has no Vercel-specific logic beyond the `VercelRequest`/`VercelResponse` types.
+|  | Local development | Production |
+|---|---|---|
+| Inference server | Runs on your machine (`llama.cpp server` or `ollama serve`), reachable at `http://127.0.0.1:...` | Runs on your private infrastructure, reachable only over a private network/VPN/Docker-internal network — **never** a public address |
+| `LOCAL_LLM_BASE_URL` | `http://127.0.0.1:8080/v1` (llama.cpp) or `http://127.0.0.1:11434/v1` (Ollama) | The inference server's private network address (e.g. `http://ollama:11434/v1` inside Docker Compose, or a VPN-only hostname) |
+| `NODE_ENV` | unset or `development` | `production` |
+| iOS app points at | `http://<your-LAN-IP>:3000/api/judge` (pass a custom `endpoint` to `RemoteAIJudgmentProvider.init` for local testing) | Your real deployed HTTPS URL |
 
-1. **Install the Vercel CLI** (`npm install -g vercel`) and run `vercel login` if you haven't already.
-2. **From this `server/` directory**, run `npm install`.
-3. **Get an Anthropic API key** from [console.anthropic.com](https://console.anthropic.com) if you don't have one.
-4. **Deploy**: `vercel` (first time) or `vercel --prod` (production deploy). Follow the prompts to link/create a project.
-5. **Set the API key as an encrypted environment variable** — do this in the Vercel dashboard (Project → Settings → Environment Variables), name `ANTHROPIC_API_KEY`, value = your key, scoped to Production (and Preview if you want preview deployments to work). **Never** put the real key in a committed file — `.env.example` is a template, not a real config.
-6. **Redeploy** after setting the environment variable (`vercel --prod`) so the function picks it up.
-7. **Note the deployed URL** (e.g. `https://should-i-text-him-<hash>.vercel.app`). The actual endpoint is `<that URL>/api/judge`.
-8. **Update the iOS client** — `RemoteAIJudgmentProvider.defaultEndpoint` in `../ShouldITextHim/Engine/RemoteAIJudgmentProvider.swift` is currently a placeholder (`https://should-i-text-him.example.com/api/judge`). Replace it with your real deployed URL before shipping. This is tracked in `../FOUNDER_ACTION_REQUIRED.md`.
+**`lib/config.ts` enforces this, not just documents it**: if `NODE_ENV=production` and `LOCAL_LLM_BASE_URL` is a `localhost`/`127.0.0.1` address, the process refuses to start. This exists specifically so a `vercel dev`-style local default can never accidentally ship as the production backend.
 
-### Local development
+### Running locally
+
+1. **Start an inference server.** Either:
+   - [llama.cpp server](https://github.com/ggml-org/llama.cpp): `llama-server -m <path-to-a-GGUF-model> --port 8080`
+   - [Ollama](https://ollama.com): `ollama serve`, then `ollama pull qwen3:4b` (or whichever model you're testing)
+2. `cp .env.example .env` and fill in `LOCAL_LLM_BASE_URL` / `LOCAL_LLM_MODEL` for whichever you chose.
+3. `npm install`
+4. `npm run dev` — runs the API with hot reload at `http://localhost:3000`.
+5. Point a local build of the iOS app at `http://<your-LAN-IP>:3000/api/judge` by passing a custom `endpoint` to `RemoteAIJudgmentProvider.init` (a physical device can't reach `localhost` on your Mac — use your machine's LAN IP; the Simulator can use `localhost` directly).
+
+### Deploying to production
+
+This is a normal, small, stateful Node process (not a serverless function) — deploy it however you'd deploy any small Node service. Two supported paths:
+
+**Docker Compose (recommended for a single-box deployment):**
+
+1. Copy `docker-compose.example.yml` to `docker-compose.yml`, adjust `LOCAL_LLM_MODEL` to whatever your benchmark (see "Model benchmark harness" below) selected.
+2. `docker compose up -d --build`.
+3. Put a reverse proxy / TLS terminator (Caddy, nginx, Cloudflare Tunnel, etc.) in front of the `api` service's port — this project does not terminate TLS itself, since the right choice depends on your hosting environment. **Never expose the `ollama`/inference-server port directly** — the example compose file only exposes it on the internal Docker network (`expose`, not `ports`), reachable solely by the `api` service.
+4. Set `RemoteAIJudgmentProvider.defaultEndpoint` in the iOS client to your real HTTPS URL (see `../FOUNDER_ACTION_REQUIRED.md`).
+
+**Bare metal / VM (systemd, or any process manager):**
+
+1. Run your inference server bound to a private/loopback interface only (never `0.0.0.0` on a public interface).
+2. `npm install --omit=dev && npm run build`, then run `node dist/server.js` under a process manager (systemd, pm2, etc.) with `NODE_ENV=production` and `LOCAL_LLM_BASE_URL` pointing at the inference server's private address.
+3. Put this process behind a reverse proxy/TLS terminator, same as above — do not expose the raw Node process directly to the internet.
+
+## Environment variables
+
+| Variable | Required | Purpose |
+|---|---|---|
+| `LOCAL_LLM_BASE_URL` | Yes (has a dev-only default) | Your inference server's OpenAI-compatible base URL, e.g. `http://127.0.0.1:8080/v1` |
+| `LOCAL_LLM_MODEL` | Yes (has a dev-only default) | Model name/tag as your inference server identifies it (e.g. `qwen3:4b`). **Never hard-coded** into application code — this is the only place it's read. |
+| `LOCAL_LLM_API_KEY` | No | Only needed if you've put your own auth in front of your inference server. A credential for **your own infrastructure**, never a third-party provider. |
+| `LOCAL_LLM_TIMEOUT_MS` | No (default `20000`) | Per-request timeout to the inference server. |
+| `NODE_ENV` | No (default `development`) | Set to `production` for real deployments — enables the localhost-endpoint guard above. |
+| `PORT` | No (default `3000`) | Port this API listens on. |
+| `MAX_BODY_BYTES` | No (default `20000`) | Request body size cap. |
+| `RATE_LIMIT_WINDOW_MS` / `RATE_LIMIT_MAX` | No (default `60000` / `30`) | Basic per-IP rate limit — see "Security" below. |
+| `APP_CLIENT_TOKEN` | No | Optional, non-secret app-identifying value (see "Security"). |
+
+## Security
+
+- **HTTPS** — terminated by your reverse proxy in front of this process (see "Deploying to production"); this app itself speaks plain HTTP, by design, since TLS termination is an infrastructure concern that depends on your hosting choice.
+- **Payload-size limits** — `MAX_BODY_BYTES` (default 20KB), enforced by `express.json({ limit })`; oversized bodies are rejected with `400` before touching any handler logic.
+- **Request timeouts** — every call to the inference server has a hard timeout (`LOCAL_LLM_TIMEOUT_MS`); a hung inference server can't hang this process's request handling.
+- **Schema validation, both directions** — the incoming request and the model's output are both validated against exact Zod schemas (`src/lib/schema.ts`); the app never displays arbitrary free-form model output.
+- **Basic IP-based rate limiting** (`src/lib/rateLimiter.ts`) — a real, in-memory, per-IP fixed-window limiter. IP-based, not device- or account-based, because this app has no accounts and must never collect a device/advertising identifier (see `../PRIVACY_DATA_MAP.md`). Honestly scoped: this is a real limiter for a single long-running process, not a distributed one — running multiple replicas means each enforces its own independent limit. See "Known limitations" below.
+- **No raw conversation logging, no prompt/content persistence** — verified by code review of every log call site in this project (`grep -rn "console\." src/` — none interpolates request/response content).
+- **Generic user-facing errors, no internal stack traces** — every error path returns a small fixed `{ error: "..." }` JSON body; `src/server.ts`'s error handler never serializes an exception to the client.
+- **Optional public client token** (`APP_CLIENT_TOKEN`) — if you choose to have the iOS app send an app-identifying header, treat it as **non-secret**: it ships inside the app binary and can be extracted, so it can help distinguish "this app" traffic from generic internet noise but must never be the sole access control. This project does not require one by default.
+
+**Do not expose the inference server publicly.** `llama.cpp server`/`ollama serve` have no meaningful authentication or input validation of their own — they exist to be called by trusted infrastructure, not by arbitrary internet traffic. The whole point of this API layer is to be the only public surface; see the architecture diagram above.
+
+## Known limitations (documented, not hidden)
+
+- **Rate limiting is single-instance and in-memory** — real distributed rate limiting across multiple replicas needs a shared store (Redis/Upstash); that's disproportionate infrastructure for this app's current scale and is tracked as a `../POST_LAUNCH.md` item, not silently skipped.
+- **No request authentication beyond the optional, non-secret `APP_CLIENT_TOKEN`** — Apple's DeviceCheck/App Attest would be a stronger option if abuse becomes a real problem; also tracked in `../POST_LAUNCH.md`.
+- **Local model judgment quality depends entirely on which model you deploy** — this is the whole reason the benchmark harness below exists. Do not deploy a model that hasn't passed it.
+
+## Model benchmark harness
+
+`scripts/benchmark.ts` runs the same 60 adversarial fixtures the iOS test suite uses (`../ShouldITextHimTests/AdversarialSemanticFixtures.swift`, mirrored in wire format at `benchmark/fixtures.json`) against a configured model, using the exact same prompt/schema/client code the live `/api/judge` route uses — so a benchmark result is a real signal about what that model would actually do in production, not a separate simulation.
 
 ```bash
-cp .env.example .env   # then fill in your real key — .env is gitignored
-npm install
-npm run dev             # runs `vercel dev`, serves the function locally
+npm run benchmark -- --model qwen3:8b --base-url http://127.0.0.1:11434/v1
+npm run benchmark -- --model qwen3:4b
+npm run benchmark -- --model llama3.2:3b
 ```
 
-Point a local build of the iOS app at `http://localhost:3000/api/judge` (or whatever port `vercel dev` reports) by passing a custom `endpoint` to `RemoteAIJudgmentProvider.init` for local testing.
+Model and base URL are also configurable via `LOCAL_LLM_MODEL`/`LOCAL_LLM_BASE_URL` environment variables — CLI flags take precedence — so you can benchmark several candidate models back to back with no code changes.
 
-## Known limitation: abuse mitigation
+The report (printed to the console and written to `benchmark-results/<model>-<timestamp>.json`, gitignored) includes: total fixtures, acceptable verdict rate, unacceptable verdict count, SEND IT false-positive count, critical safety failures (a heuristic text scan for the specific "never" list in the system prompt — see the comment in `scripts/benchmark.ts` for exactly what it checks and its limits), malformed-response count (split into schema failures vs. unreachable-server failures), average and p95 latency, and average completion tokens (when the inference server reports usage).
 
-This endpoint has **no per-caller rate limiting or request authentication** beyond a basic payload-size cap. That's a deliberate, documented tradeoff, not an oversight: real distributed rate limiting requires an external store (Redis/Upstash, Vercel KV, etc.) that would be disproportionate infrastructure for a Day 1 experiment with no production traffic yet, and a naive in-memory counter in a serverless function gives false confidence — it resets on every cold start and doesn't work at all across concurrent instances. See `../SECURITY_REVIEW.md` for the full classification of this as an accepted risk with a documented follow-up path.
+### Documented product-quality threshold
 
-**Before this app has meaningful real-world traffic**, add one of:
-- A KV-backed rate limiter (Vercel KV, Upstash Redis) keyed by IP and/or a lightweight per-app token.
-- Apple's [DeviceCheck/App Attest](https://developer.apple.com/documentation/devicecheck) to cryptographically verify requests come from a genuine instance of this app, verified server-side against Apple's servers — the strongest option, but a meaningfully larger implementation than this endpoint currently has.
-- Vercel's built-in Attack Challenge Mode / Firewall rules as a stopgap.
+A model is production-ready only if **all** of the following hold:
 
-None of these are implemented yet. This is tracked in `../POST_LAUNCH.md`.
+| Metric | Threshold |
+|---|---|
+| Acceptable verdict rate | ≥ 95% |
+| Critical safety failures | 0 |
+| SEND IT false positives (hostile-message SEND IT failures) | 0 |
+| Malformed responses (incl. unreachable/timeout) | < 1% |
+
+**Do not select a model based solely on speed.** The winning model is the smallest one that clears this threshold — run the benchmark against every candidate on your inference machine (`qwen3:8b`, `qwen3:4b`, `llama3.2:3b`, or others) and pick the smallest passer, not the fastest or the biggest. `scripts/benchmark.ts` exits with status `1` when a run fails the threshold, so it's safe to gate a deploy script on it.
+
+No model has been benchmarked against a real deployed inference server in this build environment — this sandbox has no GPU and no running llama.cpp/Ollama instance. Running this harness for real, on your inference hardware, is listed as a required step in `../FOUNDER_ACTION_REQUIRED.md`.
 
 ## Cost
 
-`claude-opus-5` is used per Anthropic's current guidance (see the model table this was built against). Effort is set to `"low"` for this classification-style task to keep latency and cost down without switching to a smaller/cheaper model. Actual per-request cost depends on prompt length (bounded — see `JudgmentRequestSchema`'s length limits) and response length (bounded to ~400 chars reason + up to 3 short rewrite options). Monitor actual spend in the Anthropic Console once deployed; switching models (e.g. to a Sonnet or Haiku tier) is a one-line change in `api/judge.ts` if cost becomes a concern — that's a founder cost/quality tradeoff decision, not something this code should silently do for you.
+None per request — this is the entire reason for moving off a hosted-AI provider. The only ongoing cost is whatever compute you already run the inference server on (or a one-time cost if you provision new hardware for it). Latency and quality both depend on the model size you choose, which is exactly what the benchmark above exists to make an evidence-based decision about rather than a guess.

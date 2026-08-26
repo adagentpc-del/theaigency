@@ -51,7 +51,7 @@ Each item is written to be objectively checkable on a build. Covered by an autom
 
 ## Data & privacy
 
-- [ ] **AC-27**: No network request is made anywhere in the app, including for the new context inputs. *(code review — no `URLSession`/networking code exists)*
+- [ ] **AC-27**: The only network request this app ever makes is `POST` to theAIgincy's own `/api/judge` application API, and only when safety/mechanical rules didn't already resolve the request locally — never to any other host, and never directly to the self-hosted inference server. *(code review of `RemoteAIJudgmentProvider.swift` — the only `URLSession` call site in the app; see AC-43 for the safety/mechanical short-circuit)*
 - [ ] **AC-28**: Neither the proposed message, the pasted conversation, nor the quick-context notes are written to `UserDefaults`, files, or logs at any point. *(code review)*
 - [ ] **AC-29**: Relaunching the app after force-quit returns to a blank Step 1 — nothing persisted from any step. *(manual)*
 
@@ -77,6 +77,17 @@ Each item is written to be objectively checkable on a build. Covered by an autom
 - [ ] **AC-41**: No API key for the model provider exists anywhere in the iOS client or its build settings. *(code review — `grep` for `sk-ant`/`ANTHROPIC` across `ShouldITextHim/`, none expected)*
 - [ ] **AC-42**: When the AI judgment service is unavailable (offline, timeout, invalid response), the app falls back to a conservative local result, clearly labeled as such (`isLocalFallback`), with a way to retry — never a confident-looking guess presented as a real judgment. *(`RemoteAIJudgmentProviderTests`, `VerdictView`'s `localFallbackBanner`)*
 - [ ] **AC-43**: Safety-flagged and repeated-contact-flagged requests never reach the network, regardless of AI availability. *(`RemoteAIJudgmentProviderTests.testSafetyFlaggedMessageNeverHitsTheNetwork`, `testMechanicalRuleNeverHitsTheNetwork`)*
-- [ ] **AC-44**: The server never logs or persists request/response content — only an error type on failure. *(code review of `server/api/judge.ts`)*
+- [ ] **AC-44**: The server never logs or persists request/response content — only an error type on failure. *(code review of `server/src/routes/judge.ts`, `server/src/server.ts`)*
 
-Note: because a hosted-AI path is now the primary judgment mechanism, "API success / malformed API response / timeout / offline" scenarios from the original Day 1 spec now genuinely apply and are covered above — see `API_CONTRACT.md` for the full contract and `DECISIONS.md` for why this replaced the original fully-local design.
+## Self-hosted local-inference backend
+
+- [ ] **AC-45**: No third-party hosted-AI provider API key, SDK, or request code exists anywhere in this project — the model is self-hosted. *(code review — `grep -ri "anthropic\|openai" server/src server/scripts ShouldITextHim/` across non-historical files returns nothing; `server/package.json` has no hosted-AI SDK dependency)*
+- [ ] **AC-46**: The model name and inference server base URL are read from environment configuration (`LOCAL_LLM_MODEL`, `LOCAL_LLM_BASE_URL`) and never hard-coded into application logic. *(code review of `server/src/lib/config.ts`, `server/src/lib/localInferenceClient.ts`)*
+- [ ] **AC-47**: The server refuses to start with `NODE_ENV=production` and a localhost/127.0.0.1 `LOCAL_LLM_BASE_URL`. *(`server/src/lib/config.ts`; verified live in this build environment by actually starting the server both ways)*
+- [ ] **AC-48**: A message/goal pair with insufficient supporting context can produce `NEED MORE CONTEXT` (`need_context`/`add_context`), and the app never treats absence of a detected problem as evidence for `SEND IT`. *(`RemoteAIJudgmentProviderTests.testNeedContextWireValueMapsToNeedContextVerdict`, `server/src/lib/prompt.ts`'s "most important rule")*
+- [ ] **AC-49**: Tapping ADD MORE CONTEXT after a NEED MORE CONTEXT verdict returns to Step 3 with the proposed message, goal, and any already-entered context intact. *(`JudgeViewModelTests.testReturnToAddContextGoesBackToContextStepPreservingEntries`)*
+- [ ] **AC-50**: A basic per-IP rate limit exists on the application API and rejects requests over the configured threshold with `429`. *(`server/src/lib/rateLimiter.ts`; verified live in this build environment)*
+- [ ] **AC-51**: A model benchmark harness exists, runs the same 60 adversarial fixtures used by the iOS test suite against a configurable local model/base-URL, and reports acceptable-verdict rate, unacceptable count, SEND IT false-positive count, critical safety failures, malformed-response rate, average/p95 latency, and average completion tokens, against a documented pass/fail threshold. *(`server/scripts/benchmark.ts`, `server/benchmark/fixtures.json`, `server/README.md` → "Model benchmark harness")*
+- [ ] **AC-52**: No device identifier, account identifier, advertising identifier, or other unrelated metadata is ever included in a judgment request. *(code review of `server/src/lib/schema.ts`'s `JudgmentRequestSchema` — exactly `proposedMessage`/`goal`/`context`, unchanged by this migration)*
+
+Note: because an AI-backed path is now the primary judgment mechanism, "API success / malformed API response / timeout / offline" scenarios from the original Day 1 spec now genuinely apply and are covered above — see `API_CONTRACT.md` for the full contract and `DECISIONS.md` for why this replaced the original fully-local design, and decisions 18–21 for why the AI backend itself is now self-hosted rather than a third-party hosted provider.

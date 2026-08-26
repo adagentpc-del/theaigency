@@ -12,6 +12,7 @@ enum Theme {
         case .rewrite: return .orange
         case .sleep: return .blue
         case .dontSend: return .red
+        case .needContext: return .purple
         }
     }
 

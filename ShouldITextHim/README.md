@@ -17,18 +17,19 @@ Judgment only ever runs after all three inputs exist — see [`PRODUCT_SPEC.md`]
 
 ## How judging works
 
-Two physical-device QA passes reshaped this twice — see [`DECISIONS.md`](DECISIONS.md) for the full history. Judgment is layered:
+Three physical-device QA passes reshaped this — see [`DECISIONS.md`](DECISIONS.md) for the full history. Judgment is layered:
 
 1. **Safety rules** (`Engine/SafetyScanner.swift`) — always run first, fully on-device, over every piece of free text you entered. Never depends on the network.
 2. **Deterministic mechanical rules** (`Engine/MessageSignals.swift`, `Engine/ContextSignals.swift`, `Engine/DeterministicJudgmentRules.swift`) — structural facts (repeated contact, double-texting, breakup topic, message length) an ordered rule list can resolve confidently without needing to understand tone. Also fully on-device. **Never returns SEND IT** — see [`AI_SAFETY.md`](AI_SAFETY.md) for why.
-3. **Semantic judgment** (`Engine/RemoteAIJudgmentProvider.swift`) — the primary path for everything else: hostility, sarcasm, passive aggression, manipulation, and whether the message actually fits the stated goal. Calls theAIgincy's own server-side proxy (`server/`), which prompts a real AI model and returns a short, structured, schema-validated result. **No model API key is ever in this app** — the proxy holds it server-side.
+3. **Semantic judgment** (`Engine/RemoteAIJudgmentProvider.swift`) — the primary path for everything else: hostility, sarcasm, passive aggression, manipulation, and whether the message actually fits the stated goal. Calls theAIgincy's own application API (`server/`), which prompts a **self-hosted local language model** (no third-party AI provider) and returns a short, structured, schema-validated result — including a fifth possible verdict, `NEED MORE CONTEXT`, for when there simply isn't enough to go on. **No hosted-provider or local-inference secret is ever in this app** — the server holds any such credential, and the app only ever knows the server's public URL.
 4. **Conservative fallback** (`Engine/FallbackJudgment.swift`) — used only when the network/AI is unavailable. Always local, always REWRITE IT, never SEND IT — the app never fakes confidence when it can't get a real judgment.
 
 This means:
 
 - Safety-flagged and repeated-contact messages never leave your phone.
-- Everything else is sent only to theAIgincy's own server to get a verdict — never stored, never shown to anyone else. See [`PRIVACY_DATA_MAP.md`](PRIVACY_DATA_MAP.md) for the full data map.
+- Everything else is sent only to theAIgincy's own application API to get a verdict — never stored, never shown to anyone else, and never sent to any third party. See [`PRIVACY_DATA_MAP.md`](PRIVACY_DATA_MAP.md) for the full data map.
 - If you're offline or the AI is unreachable, you still get a conservative, clearly-labeled result instead of a dead end.
+- If the model doesn't have enough context to judge responsibly, it says so (`NEED MORE CONTEXT`) instead of guessing — see [`AI_SAFETY.md`](AI_SAFETY.md).
 
 ## Project layout
 
@@ -50,7 +51,8 @@ ShouldITextHim/
 │   └── PrivacyInfo.xcprivacy
 ├── ShouldITextHimTests/             XCTest unit tests: deterministic-rule fixtures, safety, 60-scenario
 │                                    adversarial semantic fixture suite, and mocked/live provider tests
-└── server/                          Server-side judgment proxy (TypeScript, deployed separately — see below)
+└── server/                          Application API (TypeScript/Node/Express) — talks privately to a
+                                     self-hosted local language model, deployed separately, see below
 ```
 
 ## Requirements
@@ -58,11 +60,11 @@ ShouldITextHim/
 - Xcode (current version supported by Apple for App Store submission)
 - iOS 17.0+ deployment target
 - No third-party dependencies in the iOS app, no Swift Package Manager packages
-- A deployed instance of `server/` (see `server/README.md`) for real AI judgments — the app still builds and runs without one, but judgment falls back to a conservative local-only result until `RemoteAIJudgmentProvider.defaultEndpoint` points at a real server
+- A deployed instance of `server/` (see `server/README.md`) — talking to a self-hosted local inference server (llama.cpp server or Ollama) running a model that has cleared `server/scripts/benchmark.ts`'s documented threshold — for real AI judgments. The app still builds and runs without one, but judgment falls back to a conservative local-only result until `RemoteAIJudgmentProvider.defaultEndpoint` points at a real deployed server.
 
 ## Building
 
-Open `ShouldITextHim.xcodeproj` in Xcode and run the `ShouldITextHim` scheme on a simulator or device. No API keys or secrets belong in the iOS project at all — see `server/README.md` for the one place a credential exists (server-side only).
+Open `ShouldITextHim.xcodeproj` in Xcode and run the `ShouldITextHim` scheme on a simulator or device. No API keys or secrets belong in the iOS project at all — there is no third-party hosted-AI provider anywhere in this project; see `server/README.md` for where the self-hosted model configuration lives (server-side only).
 
 ## Testing
 
@@ -77,7 +79,9 @@ xcodebuild test \
 
 Everything runs with zero network access or credentials except `RemoteAIJudgmentProviderLiveTests`, which skips unless `SHOULDITEXTHIM_LIVE_JUDGE_ENDPOINT` is set to a real deployed server (see `AI_SAFETY.md` and `server/README.md`).
 
-> This repository was built in a Linux container with no Xcode/macOS toolchain available, so `xcodebuild`/`swiftc` (and the server's `npm run build`) could not be run here. See [`RELEASE_CHECKLIST.md`](RELEASE_CHECKLIST.md) and [`FOUNDER_ACTION_REQUIRED.md`](FOUNDER_ACTION_REQUIRED.md) for what still needs to happen on a Mac (and with Node, for the server) before submission.
+For the server, `cd server && npm install && npm run build` type-checks and compiles the whole project (application code and the benchmark script); `npm run benchmark -- --model <name> --base-url <url>` runs the 60-fixture model benchmark against a configured local model.
+
+> This repository was built in a Linux container with no Xcode/macOS toolchain available, so `xcodebuild`/`swiftc` could not be run here — the iOS side is unverified by any compiler in this environment. Node **is** available here, so the server side is materially better verified: `npm install`/`npm run build` were actually run (clean), and the built server was actually started and exercised over real HTTP requests (validation, rate limiting, the production-mode safety guard, and inference-unavailable fallback all behaved as documented) — see `SECURITY_REVIEW.md`. No local model has been benchmarked against a real inference server in this environment (no GPU/inference server here). See [`RELEASE_CHECKLIST.md`](RELEASE_CHECKLIST.md) and [`FOUNDER_ACTION_REQUIRED.md`](FOUNDER_ACTION_REQUIRED.md) for what still needs to happen on a Mac (for iOS) and on real inference hardware (for the model benchmark) before submission.
 
 ## Documents
 

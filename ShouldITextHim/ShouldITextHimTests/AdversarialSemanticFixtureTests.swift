@@ -71,7 +71,7 @@ final class AdversarialSemanticFixtureMockedProviderTests: XCTestCase {
     }
 
     private static let wireVerdicts: [Verdict: String] = [
-        .send: "send", .rewrite: "rewrite", .sleep: "sleep", .dontSend: "dont_send",
+        .send: "send", .rewrite: "rewrite", .sleep: "sleep", .dontSend: "dont_send", .needContext: "need_context",
     ]
 
     private let representativeFixtureNames: Set<String> = [

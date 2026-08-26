@@ -55,11 +55,49 @@ export type JudgmentRequestPayload = z.infer<typeof JudgmentRequestSchema>;
  * product brief's conceptual JSON exactly (snake_case, matching the
  * Swift client's `RemoteJudgmentResponseDTO` wire mapping in
  * RemoteAIJudgmentProvider.swift).
+ *
+ * `need_context` / `add_context` are first-class, not error states: a
+ * local model that doesn't have enough information to responsibly judge
+ * tone, goal fit, or context should say so rather than guess. Absence of
+ * a detected problem is never treated as evidence for `send` — see
+ * `prompt.ts` and `../../AI_SAFETY.md`.
  */
 export const JudgmentResponseSchema = z.object({
-  verdict: z.enum(["send", "rewrite", "sleep", "dont_send"]),
+  verdict: z.enum(["send", "rewrite", "sleep", "dont_send", "need_context"]),
   reason: z.string().min(1).max(400),
-  recommended_action: z.enum(["send", "wait", "rewrite", "direct"]),
+  recommended_action: z.enum(["send", "wait", "rewrite", "direct", "add_context"]),
   rewrite_options: z.array(z.string().min(1).max(300)).max(3),
 });
 export type JudgmentResponsePayload = z.infer<typeof JudgmentResponseSchema>;
+
+/**
+ * The raw JSON Schema (not a Zod schema) sent to the local inference
+ * server's OpenAI-compatible `response_format: { type: "json_schema" }`
+ * field, for servers that support constrained/grammar-guided decoding
+ * (llama.cpp server, and Ollama's OpenAI-compatible endpoint where
+ * practical). Hand-kept in sync with `JudgmentResponseSchema` above —
+ * there are only four fields, so this is not a maintenance burden.
+ * Servers that ignore `response_format` entirely still work: the system
+ * prompt instructs the same shape in plain language, and every response
+ * is re-validated against `JudgmentResponseSchema` regardless.
+ */
+export const JUDGMENT_RESPONSE_JSON_SCHEMA = {
+  type: "object",
+  properties: {
+    verdict: {
+      type: "string",
+      enum: ["send", "rewrite", "sleep", "dont_send", "need_context"],
+    },
+    reason: { type: "string" },
+    recommended_action: {
+      type: "string",
+      enum: ["send", "wait", "rewrite", "direct", "add_context"],
+    },
+    rewrite_options: {
+      type: "array",
+      items: { type: "string" },
+    },
+  },
+  required: ["verdict", "reason", "recommended_action", "rewrite_options"],
+  additionalProperties: false,
+} as const;
