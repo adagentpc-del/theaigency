@@ -9,12 +9,20 @@ struct VerdictView: View {
         "Verdict: \(result.verdict.headline)\nJudged by Should I Text Him?"
     }
 
+    private var rewriteButtonTitle: String {
+        result.recommendedAction == .direct ? "SEND SOMETHING DIRECT" : "HELP ME REWRITE IT"
+    }
+
     var body: some View {
         VStack(spacing: 20) {
             Text("Goal: \(request.goal.title)")
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity, alignment: .center)
+
+            if result.isLocalFallback {
+                localFallbackBanner
+            }
 
             Spacer(minLength: 4)
 
@@ -45,7 +53,7 @@ struct VerdictView: View {
                         Haptics.tap()
                         viewModel.startRewrite()
                     } label: {
-                        Text("HELP ME REWRITE IT")
+                        Text(rewriteButtonTitle)
                             .fontWeight(.bold)
                             .frame(maxWidth: .infinity)
                             .frame(minHeight: Theme.minimumTapTarget)
@@ -80,6 +88,33 @@ struct VerdictView: View {
         .onAppear {
             Haptics.verdictRevealed(for: result.verdict)
         }
+    }
+
+    /// Shown only when this result came from the on-device fallback
+    /// because the AI judgment service was unavailable — never faking
+    /// confidence about a result we couldn't fully verify. See
+    /// `AI_SAFETY.md` and `DECISIONS.md`.
+    private var localFallbackBanner: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Label("I can't judge this properly right now — this is a limited, local-only check.", systemImage: "wifi.slash")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+
+            Button {
+                Haptics.tap()
+                Task { await viewModel.retryJudgment() }
+            } label: {
+                Text("Try again for full analysis")
+                    .font(.footnote.weight(.semibold))
+            }
+            .accessibilityHint("Retries the full analysis, useful once you have a connection")
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: Theme.cornerRadius)
+                .fill(Color(uiColor: .secondarySystemBackground))
+        )
     }
 }
 

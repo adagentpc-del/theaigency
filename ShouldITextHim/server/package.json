@@ -1,0 +1,19 @@
+{
+  "name": "should-i-text-him-judge-server",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Minimal server-side proxy for Should I Text Him?'s semantic judgment endpoint. Holds the Anthropic API key server-side; the iOS client only ever knows this endpoint's public URL.",
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p .",
+    "dev": "vercel dev"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.71.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@vercel/node": "^3.2.0",
+    "typescript": "^5.6.0"
+  }
+}

@@ -12,7 +12,7 @@ Draft only. Every field must be re-verified against the actual shipped build and
 
 ## Promotional text (170 chars max, optional/updatable without review)
 
-Paste the text. Get a verdict. Send it, rewrite it, sleep on it, or don't. Zero accounts, zero data leaves your phone.
+Paste the text. Get an AI verdict. Send it, rewrite it, sleep on it, or don't. No account, nothing saved.
 
 ## Description
 
@@ -39,7 +39,7 @@ we won't ask twice.
 
 WHY IT'S DIFFERENT
 — No account. No login. No history saved.
-— Nothing you paste ever leaves your phone.
+— Real AI reads the whole picture — not just your words, but what led up to them.
 — Funny and sharp, never clinical, never a lecture.
 — Built for the moment right before you hit send.
 
@@ -67,6 +67,7 @@ Expect a **12+** or **17+** rating depending on Apple's current questionnaire wo
 - Infrequent/Mild Mature/Suggestive Themes: **Yes** (dating/relationship context)
 - Profanity or Crude Humor: **Yes, Infrequent/Mild** (the tone is sassy; review actual shipped copy against Apple's current definitions before answering)
 - References to violence/self-harm: the app never depicts or generates these — it only detects and calmly declines to engage with them if the *user* writes them. Whether this triggers a rating flag is an Apple Review judgment call — flag for founder review, not a self-certifiable "No."
+- **Generative AI / user-generated content questions**: Apple's questionnaire now asks specifically about apps featuring generative AI. Answer honestly that the app includes AI-generated text (the verdict reason and rewrite suggestions), that output is short, schema-constrained, and topic-scoped (not open-ended chat), and that a deterministic safety layer runs before the AI ever sees risky content — flag this section for founder review against Apple's current exact wording, since this category of question is newer and evolves.
 
 **This section is a starting point, not a final answer — the age rating questionnaire must be completed directly in App Store Connect against Apple's current wording at submission time.**
 
@@ -88,29 +89,44 @@ their proposed message, what they're trying to accomplish, and
 what happened before it (either a pasted conversation excerpt or
 three quick multiple-choice questions) — then returns a verdict
 (Send it / Rewrite it / Sleep on it / Don't send it) plus an
-optional rewrite. All judgment logic runs on-device — the app
-makes no network requests, requires no account, and stores no
-user content beyond the current session (see PRIVACY_DATA_MAP.md
-in the source repo for full detail).
+optional rewrite. The app requires no account and stores no user
+content anywhere — not on-device, not on our server, not with our
+AI provider (see PRIVACY_DATA_MAP.md in the source repo for full
+detail).
 
-The app includes a safety-routing feature: if any of the free
-text the user enters (proposed message, pasted conversation, or
-the optional context notes) contains language indicating violence,
-self-harm, coercion, stalking, sexual exploitation, or abuse, the
-app returns a calm, non-comedic "Don't send it" response instead
-of its usual witty tone, and hides the rewrite/share actions for
-that result. This is implemented as a local, deterministic pattern
-match (see AI_SAFETY.md) — there is no live moderation service.
+Primary judgment is AI-generated: the proposed message, goal, and
+context are sent over HTTPS to our own server, which prompts an
+AI model (Claude, via the Anthropic API) and returns a short,
+structured result — a verdict, a one-to-two-sentence reason, and
+up to 3 optional rewrite suggestions. The model's output is
+schema-validated before it is ever displayed; there is no
+open-ended chat, and the app never presents unvalidated or
+free-form AI output to the user.
+
+Two things always happen fully on-device first, before anything
+is sent to our server, and work even offline: (1) a deterministic
+safety scan — if any text the user enters (proposed message,
+pasted conversation, or optional context notes) contains language
+indicating violence, self-harm, coercion, stalking, sexual
+exploitation, or abuse, the app returns a calm, non-comedic "Don't
+send it" response instead of its usual witty tone, hides the
+rewrite/share actions, and never sends that content to the AI
+model; (2) a repeated-contact check that blocks sending when the
+user has described already reaching out more than once without a
+response. If our AI service is unreachable, the app falls back to
+a clearly-labeled, conservative local result rather than presenting
+a guess as if it were a real judgment.
 
 To test the safety-routing path: enter any proposed message, pick
 any goal, then on the context step either paste a conversation or
 answer the quick questions, but put an explicit threat in the
 message or the optional notes field (e.g. "I will hurt you if you
 don't answer") and confirm the app returns a calm decline rather
-than a joke.
+than a joke, and that this happens even in Airplane Mode.
 
 The app is not therapy, counseling, or a crisis service, and does
-not claim to be — this is stated in the app's own copy.
+not claim to be — this is stated in the app's own copy and enforced
+in the AI's instructions.
 ```
 
 ## Screenshot shot list
@@ -132,6 +148,8 @@ All screenshots must be captured from the actual running app on the target devic
 - Before/after: original message vs. one of the rewrite options.
 - Duet/stitch bait: "guess the verdict before it loads."
 
-## What this app does not claim
+## What this app does and does not claim
 
-Per `PRODUCT_SPEC.md` and `AI_SAFETY.md`: no claim of being AI-powered in the sense of a hosted model (it isn't, in this release — see `DECISIONS.md`), no therapy/counseling/legal/medical claim, no claim of certainty about another person's intentions or character. Marketing copy must stay inside these lines.
+**Now accurate to claim**: the app uses AI to judge messages — a real hosted model, called through theAIgincy's own server, reads the message/goal/context (see `AI_SAFETY.md`, `API_CONTRACT.md`). Marketing copy can say "AI-powered" honestly now; it could not in the previous, fully-local release.
+
+**Still must never claim**: no therapy/counseling/legal/medical claim, no claim of certainty about another person's intentions, motives, or character (the AI is explicitly instructed against this — see `server/lib/prompt.ts`), no claim that nothing ever leaves the device (it does, for the AI-judged path — see `PRIVACY_DATA_MAP.md`). Marketing copy must stay inside these lines.

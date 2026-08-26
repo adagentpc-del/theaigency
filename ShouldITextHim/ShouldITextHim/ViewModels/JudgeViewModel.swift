@@ -52,7 +52,7 @@ final class JudgeViewModel {
     private let judgingDelayNanoseconds: UInt64
 
     init(
-        provider: JudgmentProvider = LocalJudgmentProvider(),
+        provider: JudgmentProvider = RemoteAIJudgmentProvider(),
         clipboard: ClipboardWriting = SystemClipboard(),
         judgingDelayNanoseconds: UInt64 = 500_000_000
     ) {
@@ -134,8 +134,24 @@ final class JudgeViewModel {
     // MARK: - Post-verdict actions
 
     func startRewrite() {
-        guard case .verdict(let request, _) = phase else { return }
-        phase = .rewriteResult(request.goal, RewriteEngine.options(for: request.goal))
+        guard case .verdict(let request, let result) = phase else { return }
+        // Prefer the AI's contextual rewrite suggestions when it provided
+        // any; fall back to the fixed local templates otherwise (safety
+        // routing, mechanical rules, and the offline fallback never
+        // populate rewriteOptions).
+        let options = result.rewriteOptions.isEmpty
+            ? RewriteEngine.options(for: request.goal)
+            : result.rewriteOptions
+        phase = .rewriteResult(request.goal, options)
+    }
+
+    /// Re-runs judgment for the same message/goal/context — offered on the
+    /// verdict screen when the last result was a local fallback, so the
+    /// user can retry for a full semantic analysis once back online. The
+    /// underlying step properties are untouched by a normal verdict, so
+    /// this is just `submitContext()` again.
+    func retryJudgment() async {
+        await submitContext()
     }
 
     func reset() {

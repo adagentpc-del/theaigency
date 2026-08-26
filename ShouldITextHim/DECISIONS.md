@@ -75,3 +75,39 @@ Physical-device QA on the first build found a release-blocking defect: `Judgment
 **Decision:** `DeterministicJudgmentRules.evaluate` is an ordered list of `if` conditions, each returning immediately on match, rather than a numeric weighted-scoring model.
 
 **Why:** Priority ordering makes the reasoning legible and testable in plain English (see the doc comments in that file) and makes it possible to state, and test, hard invariants like "safety always wins" and "explicit repeated-contact disclosure always wins" without those guarantees being one bad weight tweak away from silently regressing. A scoring model optimizes for aggregate accuracy; this product needs specific guarantees (never encourage harassment, never let anger slip through as a validated boundary) that are much easier to keep true with explicit, ordered rules.
+
+---
+
+## Revision note (semantic judgment architecture)
+
+A second physical-device QA pass found a second release-blocking defect: `hello gangster what the fuck is your problem` still returned SEND IT, because it matched no phrase in `MessageSignals.angerTerms`. The instruction from that report was explicit: don't fix this by adding more hostile phrases — a keyword list can never be complete, and treating "no keyword matched" as "the message is fine" was the actual bug, restated at a lower confidence threshold than the first defect. Decisions 13–17 describe the redesign that made judgment genuinely semantic while keeping safety and a few structural checks deterministic and local. Decisions 1–12 above still hold except where explicitly superseded (called out inline).
+
+## 13. Primary judgment becomes semantic (AI-backed), not keyword-based
+
+**Decision:** `RemoteAIJudgmentProvider`, calling a hosted Claude model through theAIgincy's own server-side proxy, is now the app's default/primary `JudgmentProvider`. `LocalJudgmentProvider` (decision 1's fully on-device engine) is demoted to two roles: the safety/mechanical pre-filter inside `RemoteAIJudgmentProvider`, and the offline/error fallback.
+
+**Why:** Hostility, sarcasm, passive aggression, manipulation, guilt-tripping, and veiled threats are not enumerable as a keyword list — that was the entire lesson of the second QA defect. Genuinely reading a sentence's meaning requires a language model, not string matching. This directly supersedes decision 1's "local deterministic engine only" choice: decision 1 was right that a from-scratch repo couldn't responsibly stand up a backend on day one with no product validation yet; by this point the product's core judgment logic had been proven insufficient twice, which is exactly the signal decision 1 said would justify the investment. The zero-network, zero-backend properties from decision 1 are preserved for safety-critical and mechanical cases (see decision 14) — they're just no longer asked to do the AI's job.
+
+## 14. Local rules and the local fallback can never return SEND IT
+
+**Decision:** `DeterministicJudgmentRules` has no rule that produces `.send` (four such rules existed briefly after the first redesign — calm-boundary, calm-apology, calm-closure, and positive-reciprocity — all four are removed). `FallbackJudgment`, used when the AI is unavailable, always returns `.rewrite`, never `.send`, regardless of how clean the message looks.
+
+**Why:** This is the direct, generalized fix for both reported defects, stated as a standing invariant rather than a one-off patch. A keyword-based or purely mechanical system can detect the *presence* of specific red flags; it cannot verify the *absence* of every possible problem a real reading would catch (sarcasm, a fake-calm veiled threat, manipulative affection dressed as warmth). Treating "no rule fired" as "safe to send" was the root cause both times. The only path to a confident SEND IT is now genuine semantic judgment, or an explicit, narrow, self-reported positive fact combined with mechanical safety already having cleared the message (which no current rule does alone — see decision 13). This is regression-tested directly (`DeterministicJudgmentRulesTests.testNeverReturnsSendAcrossASweepOfInputs`, `LocalJudgmentProviderFixtureTests.testNeverReturnsSend`, `AdversarialSemanticFixtureTests.testLocalProviderNeverSendsHostileOrManipulativeMessages`).
+
+## 15. Graceful degradation instead of faking confidence when the AI is unavailable
+
+**Decision:** When the network is unreachable, the request times out, or the server's response fails strict validation, the app does not retry silently or substitute a guess dressed up as a real judgment. It falls back to `FallbackJudgment`'s conservative local result, flags it `isLocalFallback = true`, and `VerdictView` shows this honestly (a banner explaining the limitation, plus a "Try again for full analysis" button).
+
+**Why:** The instruction behind this repair was explicit: "do not fake confidence." A confident-looking verdict the user can't distinguish from a real semantic judgment, produced by a keyword-matching fallback, is exactly the failure mode being fixed — just relocated to the "offline" case instead of the "always" case. Labeling the degraded path honestly costs almost nothing and preserves the trust the rest of this fix is built on.
+
+## 16. TypeScript/Vercel for the server proxy, `claude-opus-5`, structured output via schema validation
+
+**Decision:** The proxy (`server/`) is a single TypeScript serverless function targeting Vercel, calling `claude-opus-5` via the Anthropic TypeScript SDK's `messages.parse()` with `output_config.format` (Zod schema) to constrain the response shape, at `effort: "low"` to keep latency/cost proportionate to a short classification-style task.
+
+**Why:** Vercel needs zero infrastructure setup beyond `vercel deploy` and gives HTTPS, environment-variable secret management, and a free tier out of the box — appropriate for "the smallest secure endpoint needed for this app." `claude-opus-5` is used per current model guidance rather than downgrading to a smaller model for cost — effort/thinking tuning (not model choice) is the appropriate lever for a task this size, and switching models later is a one-line, founder-owned cost/quality tradeoff (`server/README.md` → "Cost"), not something this code should decide unilaterally. Structured-output validation, combined with the client's own independent validation (decision 15's sibling requirement, "validate the response before rendering"), means a malformed model response can never reach the UI unvalidated on either side of the network boundary.
+
+## 17. No per-caller rate limiting or request authentication on the proxy yet
+
+**Decision:** `server/api/judge.ts` validates request size and shape but has no rate limiting or caller authentication beyond that.
+
+**Why:** Real distributed rate limiting needs an external store (Redis/Upstash/Vercel KV); an in-memory counter in a serverless function resets on every cold start and doesn't work at all across concurrent instances, so it would provide false confidence rather than real protection — worse than clearly documenting the gap. This is a proportionate, explicitly-accepted risk for a Day 1/2 experiment with no production traffic yet (see `SECURITY_REVIEW.md` and `server/README.md` → "Known limitation: abuse mitigation"), with a concrete recommended fix (KV-backed rate limiting, or Apple DeviceCheck/App Attest for the strongest guarantee) tracked in `POST_LAUNCH.md` before this app carries meaningful real-world traffic.

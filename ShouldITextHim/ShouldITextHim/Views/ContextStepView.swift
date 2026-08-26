@@ -99,7 +99,7 @@ struct ContextStepView: View {
             }
             .frame(minHeight: 160)
 
-            Text("This stays on your device and is never sent anywhere.")
+            Text("This is only sent to get your verdict — never stored, and never shown to anyone else.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }

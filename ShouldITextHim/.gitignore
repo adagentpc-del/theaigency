@@ -27,6 +27,7 @@ Carthage/Build/
 *.xcconfig.local
 .env
 .env.*
+!.env.example
 Secrets.swift
 
 # macOS

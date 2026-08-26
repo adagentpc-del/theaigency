@@ -19,7 +19,9 @@ The first build judged the pasted message in isolation and, in real QA, defaulte
 1. what the user is trying to accomplish, and
 2. what happened right before this message.
 
-So judgment is now a 4-step flow, and **judgment never runs until all three inputs exist.** See `DECISIONS.md` for the engineering rationale and `AI_SAFETY.md`/`API_CONTRACT.md` for the architecture that makes this possible without a network call.
+So judgment is now a 4-step flow, and **judgment never runs until all three inputs exist.**
+
+A second QA pass then found that goal and context alone weren't enough either: a purely keyword-based engine still couldn't recognize hostility, sarcasm, or manipulation outside a fixed phrase list (`"hello gangster what the fuck is your problem"` returned SEND IT). Primary judgment is now genuinely semantic — a real AI model, called through theAIgincy's own server-side proxy, reads the actual message/goal/context. Safety routing and a few structural checks (repeated contact, double-texting, message length, breakup topic) still run entirely on-device first and never depend on the network. See `DECISIONS.md` for the full engineering rationale and `AI_SAFETY.md`/`API_CONTRACT.md` for the architecture.
 
 ## Screens
 
@@ -47,7 +49,7 @@ Prompt: *Okay. What happened before this?*
 
 Two mutually exclusive ways to answer, picked via a segmented control:
 
-**Option A — Paste the conversation.** A large multiline field ("Paste the recent conversation here...") with a caption explaining only the relevant recent portion is needed, and a second caption confirming it stays on-device. See `DECISIONS.md`/`AI_SAFETY.md` for what the local engine does and does not do with this free text.
+**Option A — Paste the conversation.** A large multiline field ("Paste the recent conversation here...") with a caption explaining only the relevant recent portion is needed, and a second caption clarifying it's only sent to get a verdict — never stored, never shown to anyone else. See `DECISIONS.md`/`AI_SAFETY.md` for what the local engine does and does not do with this free text before it's sent for semantic judgment.
 
 **Option B — Quick context.** Three required single-choice questions:
 - *Who texted last?* — Me / Him / Not sure / mutual
@@ -83,7 +85,7 @@ Unchanged: funny, sharp, confident, concise, socially aware, non-clinical. The a
 
 ## Data behavior
 
-Unchanged in spirit, expanded in scope: no account, no history, no cloud sync, zero network calls. The proposed message, goal, and whichever context the user provided (pasted conversation or quick-context answers) live only in `JudgeViewModel`'s in-memory properties for the current session and are cleared on START OVER or app termination. See `PRIVACY_DATA_MAP.md` for the full, updated data map.
+No account, no history, no cloud sync, no persistence anywhere in the pipeline. This is the first release where user content leaves the device in normal operation — the proposed message, goal, and context are sent to theAIgincy's server to obtain a semantic judgment (see "Why a 3-step flow" above and `API_CONTRACT.md`). Safety-flagged and repeated-contact-flagged requests never leave the device at all. Nothing is logged or stored anywhere in the pipeline (device, proxy, or model provider) — see `PRIVACY_DATA_MAP.md` for the full, updated data map.
 
 ## Monetization
 
@@ -99,7 +101,9 @@ Unchanged: free at launch, no subscriptions, no IAP in this release.
 - Back navigation from Step 2 → Step 1 and Step 3 → Step 2 without losing what was already entered.
 - Relaunch — no state persists between launches.
 - Large Dynamic Type / Reduce Motion — unchanged from the first release; see `ACCESSIBILITY_CHECKLIST.md`.
-- Identical proposed message with different context produces different verdicts — this is the core regression test in `LocalJudgmentProviderFixtureTests` proving the reported defect is fixed.
+- Identical proposed message with different context produces different verdicts — this is the core regression test in `LocalJudgmentProviderFixtureTests` proving the first reported defect is fixed.
+- Hostile/manipulative messages that match no keyword pattern (e.g. the exact profanity regression from the second QA pass) never return SEND IT — see `AI_SAFETY.md` and `AdversarialSemanticFixtureTests`.
+- AI judgment service unavailable (offline, timeout, invalid response) → a conservative local result, clearly labeled as limited, with a retry option — never a confident-looking guess.
 
 ## Explicitly out of scope for this iteration
 

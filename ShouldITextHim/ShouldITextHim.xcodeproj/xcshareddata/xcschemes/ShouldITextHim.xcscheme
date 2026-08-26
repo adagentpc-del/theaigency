@@ -14,7 +14,7 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "6F10CA9C14FA48C0AD200B54"
+               BlueprintIdentifier = "A8A1C1CAA3374096831A0C8F"
                BuildableName = "ShouldITextHim.app"
                BlueprintName = "ShouldITextHim"
                ReferencedContainer = "container:ShouldITextHim.xcodeproj">
@@ -28,7 +28,7 @@
             buildForAnalyzing = "NO">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "550D745C52ED4E58A7BB9C1B"
+               BlueprintIdentifier = "E9A9A07E25FB441D8BE0A29D"
                BuildableName = "ShouldITextHimTests.xctest"
                BlueprintName = "ShouldITextHimTests"
                ReferencedContainer = "container:ShouldITextHim.xcodeproj">
@@ -47,7 +47,7 @@
             skipped = "NO">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "550D745C52ED4E58A7BB9C1B"
+               BlueprintIdentifier = "E9A9A07E25FB441D8BE0A29D"
                BuildableName = "ShouldITextHimTests.xctest"
                BlueprintName = "ShouldITextHimTests"
                ReferencedContainer = "container:ShouldITextHim.xcodeproj">
@@ -69,7 +69,7 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "6F10CA9C14FA48C0AD200B54"
+            BlueprintIdentifier = "A8A1C1CAA3374096831A0C8F"
             BuildableName = "ShouldITextHim.app"
             BlueprintName = "ShouldITextHim"
             ReferencedContainer = "container:ShouldITextHim.xcodeproj">
@@ -86,7 +86,7 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "6F10CA9C14FA48C0AD200B54"
+            BlueprintIdentifier = "A8A1C1CAA3374096831A0C8F"
             BuildableName = "ShouldITextHim.app"
             BlueprintName = "ShouldITextHim"
             ReferencedContainer = "container:ShouldITextHim.xcodeproj">
