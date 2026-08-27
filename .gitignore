@@ -1,0 +1,39 @@
+# Root-level ignores for the theAIgincy Micro-App Factory monorepo.
+# Individual apps may keep their own .gitignore for anything app-specific;
+# these rules apply repo-wide so every new app under apps/ is covered
+# without needing to remember to add one.
+
+# Xcode
+build/
+DerivedData/
+*.pbxuser
+*.mode1v3
+*.mode2v3
+*.perspectivev3
+!default.pbxuser
+!default.mode1v3
+!default.mode2v3
+!default.perspectivev3
+xcuserdata/
+*.xccheckout
+*.moved-aside
+*.xcuserstate
+*.xcscmblueprint
+
+# Swift Package Manager
+.build/
+.swiftpm/
+
+# CocoaPods / Carthage (not used, kept defensively)
+Pods/
+Carthage/Build/
+
+# Secrets / local config — never commit real values
+*.xcconfig.local
+.env
+.env.*
+!.env.example
+Secrets.swift
+
+# macOS
+.DS_Store
