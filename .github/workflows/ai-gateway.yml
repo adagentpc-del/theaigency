@@ -24,3 +24,12 @@ jobs:
           node-version: 20
       - run: npm install --no-audit --no-fund
       - run: npm run verify
+      - name: Build production gateway image
+        run: docker build -t theaigincy-ai-gateway:test .
+      - name: Validate production compose
+        working-directory: platform/ai-gateway/deploy
+        env:
+          API_DOMAIN: api.example.com
+          ACME_EMAIL: ci@example.com
+          LOCAL_LLM_MODEL: qwen3:4b
+        run: docker compose -f docker-compose.prod.yml config >/dev/null
