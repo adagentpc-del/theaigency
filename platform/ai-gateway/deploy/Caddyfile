@@ -1,0 +1,29 @@
+{
+  email {$ACME_EMAIL}
+  admin off
+}
+
+{$API_DOMAIN} {
+  encode zstd gzip
+
+  header {
+    -Server
+    X-Content-Type-Options nosniff
+    Referrer-Policy no-referrer
+    Permissions-Policy "camera=(), microphone=(), geolocation=()"
+  }
+
+  @health path /healthz
+  handle @health {
+    reverse_proxy gateway:3000
+  }
+
+  handle {
+    reverse_proxy gateway:3000
+  }
+
+  log {
+    output stdout
+    format console
+  }
+}
