@@ -1,0 +1,28 @@
+name: Verify shared AI gateway
+
+on:
+  push:
+    paths:
+      - 'platform/ai-gateway/**'
+      - '.github/workflows/ai-gateway.yml'
+  pull_request:
+    paths:
+      - 'platform/ai-gateway/**'
+      - '.github/workflows/ai-gateway.yml'
+  workflow_dispatch:
+
+jobs:
+  gateway:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: platform/ai-gateway
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: platform/ai-gateway/package.json
+      - run: npm install --no-audit --no-fund
+      - run: npm run verify
