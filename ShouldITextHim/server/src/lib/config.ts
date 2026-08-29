@@ -3,12 +3,6 @@
  * API key exists anywhere in this codebase — `LOCAL_LLM_API_KEY` is
  * optional and, when set, is a credential for reaching your OWN
  * self-hosted inference server privately, not a third-party API key.
- *
- * The one hard rule enforced here, not just documented: this process
- * refuses to start in production pointed at a localhost/loopback
- * inference URL, so a bare `vercel dev`-style default can never
- * accidentally ship as the production backend. See `../../README.md` →
- * "Local development vs. production" for the two supported modes.
  */
 
 const NODE_ENV = process.env.NODE_ENV ?? "development";
@@ -29,58 +23,70 @@ function required(name: string, devDefault?: string): string {
   );
 }
 
-function isLoopbackUrl(url: string): boolean {
-  try {
-    const host = new URL(url).hostname;
-    return host === "localhost" || host === "127.0.0.1" || host === "::1";
-  } catch {
-    // Not a parseable URL at all — let the caller's own validation catch it;
-    // this check only cares about accidentally-shipped loopback addresses.
-    return false;
+function positiveInt(name: string, fallback: number, allowZero = false): number {
+  const raw = readEnv(name);
+  if (raw === undefined) return fallback;
+  const parsed = Number.parseInt(raw, 10);
+  const minimum = allowZero ? 0 : 1;
+  if (!Number.isFinite(parsed) || parsed < minimum) {
+    throw new Error(`${name} must be an integer >= ${minimum}`);
   }
+  return parsed;
 }
 
-const localLlmBaseUrl = required("LOCAL_LLM_BASE_URL", "http://127.0.0.1:8080/v1");
+function parseBaseUrl(raw: string): string {
+  let url: URL;
+  try {
+    url = new URL(raw);
+  } catch {
+    throw new Error("LOCAL_LLM_BASE_URL must be a valid absolute URL");
+  }
+  if (url.protocol !== "http:" && url.protocol !== "https:") {
+    throw new Error("LOCAL_LLM_BASE_URL must use http or https");
+  }
+  return raw.replace(/\/+$/, "");
+}
+
+function isLoopbackUrl(url: string): boolean {
+  const host = new URL(url).hostname;
+  return host === "localhost" || host === "127.0.0.1" || host === "::1";
+}
+
+const localLlmBaseUrl = parseBaseUrl(
+  required("LOCAL_LLM_BASE_URL", "http://127.0.0.1:8080/v1"),
+);
 
 if (isProduction && isLoopbackUrl(localLlmBaseUrl)) {
   throw new Error(
     "Refusing to start with NODE_ENV=production and a localhost/127.0.0.1 LOCAL_LLM_BASE_URL. " +
       "Set LOCAL_LLM_BASE_URL to the private network address of your self-hosted inference " +
-      "server (e.g. a Docker Compose service name, or a private/VPN address) — never a loopback " +
-      "address in production. See README.md → 'Local development vs. production'.",
+      "server (for example a Docker Compose service name or private/VPN address).",
   );
 }
 
 export const config = {
   nodeEnv: NODE_ENV,
   isProduction,
-  port: parseInt(readEnv("PORT") ?? "3000", 10),
+  port: positiveInt("PORT", 3000),
 
   localLlm: {
     baseUrl: localLlmBaseUrl,
-    // Never hard-coded into application logic — this is the only place
-    // the model name is read, and every request uses whatever this
-    // resolves to at startup.
     model: required("LOCAL_LLM_MODEL", "qwen3:4b"),
-    // Optional. Most local llama.cpp/Ollama deployments don't require an
-    // API key at all; when one is configured (e.g. a reverse proxy in
-    // front of the inference server expects a bearer token), it is a
-    // credential for OUR OWN private infrastructure, never a third-party
-    // hosted-provider key.
     apiKey: readEnv("LOCAL_LLM_API_KEY"),
-    timeoutMs: parseInt(readEnv("LOCAL_LLM_TIMEOUT_MS") ?? "20000", 10),
+    timeoutMs: positiveInt("LOCAL_LLM_TIMEOUT_MS", 20000),
   },
 
-  maxBodyBytes: parseInt(readEnv("MAX_BODY_BYTES") ?? "20000", 10),
+  maxBodyBytes: positiveInt("MAX_BODY_BYTES", 20000),
 
   rateLimit: {
-    windowMs: parseInt(readEnv("RATE_LIMIT_WINDOW_MS") ?? "60000", 10),
-    max: parseInt(readEnv("RATE_LIMIT_MAX") ?? "30", 10),
+    windowMs: positiveInt("RATE_LIMIT_WINDOW_MS", 60000),
+    max: positiveInt("RATE_LIMIT_MAX", 30),
   },
 
-  // Optional, non-secret application identifier a client may send (e.g. a
-  // header). Since it ships inside the iOS binary it can be read out of
-  // the app and is never treated as a secret or as the sole access
-  // control — see SECURITY_REVIEW.md.
+  // Number of reverse-proxy hops Express should trust when resolving req.ip.
+  // `true` is intentionally not supported because an unrestricted trust chain
+  // lets a direct caller spoof X-Forwarded-For and bypass IP rate limiting.
+  trustProxyHops: positiveInt("TRUST_PROXY_HOPS", 1, true),
+
   publicClientToken: readEnv("APP_CLIENT_TOKEN"),
 };

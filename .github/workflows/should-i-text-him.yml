@@ -1,0 +1,31 @@
+name: Verify Should I Text Him
+
+on:
+  push:
+    paths:
+      - "ShouldITextHim/server/**"
+      - ".github/workflows/should-i-text-him.yml"
+  pull_request:
+    paths:
+      - "ShouldITextHim/server/**"
+      - ".github/workflows/should-i-text-him.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  server:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ShouldITextHim/server
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: ShouldITextHim/server/package-lock.json
+      - run: npm ci
+      - run: npm run verify

@@ -1,14 +1,16 @@
 {
   "name": "should-i-text-him-judge-server",
   "private": true,
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Application API for Should I Text Him?'s semantic judgment endpoint. Talks privately to a self-hosted local language model — no third-party hosted-AI provider, no API key for one, anywhere in this project.",
   "type": "module",
   "scripts": {
     "build": "tsc -p . && tsc -p tsconfig.scripts.json",
     "start": "node dist/server.js",
     "dev": "tsx watch src/server.ts",
-    "benchmark": "tsx scripts/benchmark.ts"
+    "benchmark": "tsx scripts/benchmark.ts",
+    "smoke": "node scripts/smoke-test.mjs",
+    "verify": "npm run build && npm run smoke"
   },
   "dependencies": {
     "express": "^4.21.0",
