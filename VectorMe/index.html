@@ -5,12 +5,21 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Vector Me — Make Your Artwork Print-Ready</title>
   <meta name="description" content="Turn PNG, JPG and WEBP logos into clean, scalable SVG and vector PDF files for apparel, signs, stickers and print production." />
+  <meta property="og:title" content="Vector Me — Make Your Artwork Print-Ready" />
+  <meta property="og:description" content="Turn AI-generated logos and ordinary images into scalable files your printer can actually use." />
+  <meta property="og:type" content="website" />
+  <meta name="twitter:card" content="summary_large_image" />
   <link rel="stylesheet" href="./styles.css" />
 </head>
 <body>
   <header class="topbar">
-    <div class="brand">theAIgincy <span>/ Vector Me</span></div>
-    <button id="resetButton" class="ghost" type="button">New file</button>
+    <a class="brand" href="/">theAIgincy <span>/ Vector Me</span></a>
+    <nav class="header-actions" aria-label="Account actions">
+      <span id="creditBadge" class="credit-badge hidden"></span>
+      <button id="projectsButton" class="ghost hidden" type="button">My vectors</button>
+      <button id="accountButton" class="ghost" type="button">Sign in</button>
+      <button id="resetButton" class="ghost" type="button">New file</button>
+    </nav>
   </header>
 
   <main>
@@ -18,73 +27,67 @@
       <div>
         <p class="eyebrow">PRINT-READY VECTOR CONVERSION</p>
         <h1>Turn this into a real vector file.</h1>
-        <p class="lede">Upload an AI-generated logo or ordinary image and get scalable artwork ready for shirts, jerseys, signs, stickers and more.</p>
+        <p class="lede">Upload an AI-generated logo or ordinary image and get scalable artwork ready for shirts, jerseys, hats, signs, stickers and more.</p>
       </div>
-      <div class="hero-note">No Illustrator required · Files stay in your browser in this MVP</div>
+      <div class="hero-note"><strong>No Illustrator required.</strong><br />Your source image is processed locally in your browser. Only vector output is saved if you choose to save a project.</div>
     </section>
 
     <section id="uploadCard" class="card upload-card">
       <input id="fileInput" type="file" accept="image/png,image/jpeg,image/webp" hidden />
       <button id="uploadButton" class="dropzone" type="button">
         <strong>Upload your artwork</strong>
-        <span>PNG · JPG · WEBP</span>
+        <span>PNG · JPG · WEBP · up to 20 MB</span>
+        <small>Drag and drop or choose a file</small>
       </button>
       <p id="uploadError" class="error" role="alert"></p>
     </section>
 
     <section id="workspace" class="workspace hidden" aria-live="polite">
       <aside class="controls card">
+        <section id="analysisPanel" class="analysis-panel hidden">
+          <p class="eyebrow">ARTWORK ANALYSIS</p>
+          <div id="analysisSummary"></div>
+        </section>
+
         <h2>1. What are you making?</h2>
         <div id="useCases" class="chips"></div>
 
         <h2>2. Conversion mode</h2>
         <div class="mode-grid">
-          <button class="mode active" data-mode="trace" type="button"><strong>Trace</strong><span>Stay close to the original.</span></button>
-          <button class="mode" data-mode="rebuild" type="button"><strong>Rebuild</strong><span>Cleaner geometry and fewer artifacts.</span></button>
+          <button class="mode active" data-mode="trace" type="button"><strong>Trace</strong><span>Keep the artwork close to the original.</span></button>
+          <button class="mode" data-mode="rebuild" type="button"><strong>Rebuild</strong><span>Simplify rough geometry and remove more artifacts.</span></button>
         </div>
 
-        <h2>3. Colors</h2>
+        <h2>3. Production settings</h2>
         <label class="field">Palette size
-          <select id="colorCount">
-            <option value="2">2 colors</option>
-            <option value="4" selected>4 colors</option>
-            <option value="8">8 colors</option>
-            <option value="16">16 colors</option>
-          </select>
+          <select id="colorCount"><option value="2">2 colors</option><option value="4" selected>4 colors</option><option value="8">8 colors</option><option value="16">16 colors</option></select>
         </label>
+        <div id="palettePreview" class="palette-preview" aria-label="Detected palette"></div>
         <label class="check"><input id="removeBackground" type="checkbox" checked /> Remove likely background</label>
         <label class="field">Detail
-          <select id="detail">
-            <option value="low">Low</option>
-            <option value="medium" selected>Medium</option>
-            <option value="high">High</option>
-          </select>
+          <select id="detail"><option value="low">Low</option><option value="medium" selected>Medium</option><option value="high">High</option></select>
         </label>
         <button id="vectorizeButton" class="primary" type="button">Vectorize artwork</button>
-        <p id="statusText" class="status"></p>
+        <p id="statusText" class="status" role="status"></p>
       </aside>
 
       <section class="preview card">
         <div class="preview-head">
-          <div>
-            <p class="eyebrow">BEFORE / AFTER</p>
-            <h2 id="fileName">Artwork</h2>
-          </div>
-          <div class="tabs">
-            <button class="tab active" data-view="original" type="button">Original</button>
-            <button class="tab" data-view="vector" type="button">Vector</button>
-          </div>
+          <div><p class="eyebrow">BEFORE / AFTER</p><h2 id="fileName">Artwork</h2></div>
+          <div class="tabs"><button class="tab active" data-view="original" type="button">Original</button><button class="tab" data-view="vector" type="button">Vector</button><button class="tab" data-view="compare" type="button">Compare</button></div>
         </div>
-        <div class="canvas-wrap checker">
+        <div id="canvasWrap" class="canvas-wrap checker">
           <img id="originalPreview" alt="Original uploaded artwork" />
           <div id="vectorPreview" class="hidden" aria-label="Vectorized artwork preview"></div>
+          <div id="comparePreview" class="compare-preview hidden">
+            <img id="compareOriginal" alt="Original artwork comparison" />
+            <div id="compareVectorClip" class="compare-vector-clip"><div id="compareVector"></div></div>
+            <input id="compareSlider" class="compare-slider" type="range" min="0" max="100" value="50" aria-label="Before and after comparison position" />
+          </div>
         </div>
 
         <section id="printCheck" class="print-check hidden">
-          <div>
-            <p class="eyebrow">PRINT CHECK</p>
-            <h3 id="printStatus">Ready</h3>
-          </div>
+          <div><p class="eyebrow">PRINT CHECK</p><h3 id="printStatus">Ready</h3></div>
           <ul id="printWarnings"></ul>
         </section>
 
@@ -92,14 +95,35 @@
           <button id="downloadSvg" class="primary" type="button">Download SVG</button>
           <button id="downloadPdf" class="secondary" type="button">Download vector PDF</button>
           <button id="downloadPng" class="secondary" type="button">Download transparent PNG</button>
+          <button id="downloadAll" class="secondary" type="button">Download all</button>
+          <button id="saveProject" class="secondary" type="button">Save project</button>
         </div>
       </section>
     </section>
+
+    <section class="explain-grid">
+      <article><p class="eyebrow">AI ART → PRODUCTION</p><h2>Made your logo in ChatGPT?</h2><p>AI image generators usually give you raster artwork. Vector Me converts clean regions into scalable paths so the file can be enlarged without pixelation.</p></article>
+      <article><p class="eyebrow">EMBROIDERY</p><h2>Vector is preparation—not digitizing.</h2><p>For hats and embroidery, send the clean SVG or vector PDF to your digitizer. They will create machine-specific DST/PES stitch files.</p></article>
+      <article><p class="eyebrow">PRINT CHECK</p><h2>Catch production problems early.</h2><p>Vector Me flags excessive colors, tiny shapes, and overly complex geometry based on what you are making.</p></article>
+    </section>
+
+    <section class="guide card">
+      <p class="eyebrow">WHAT FILE DOES MY PRINTER NEED?</p>
+      <h2>A 60-second file guide</h2>
+      <div class="guide-grid"><div><strong>SVG</strong><p>Best general-purpose editable vector file for many printers, sign shops, web tools and cutting workflows.</p></div><div><strong>Vector PDF</strong><p>Useful for commercial printers and vendors that prefer PDF while preserving vector geometry.</p></div><div><strong>PNG</strong><p>Transparent raster preview. Useful digitally, but it is not a true vector file.</p></div><div><strong>DST / PES</strong><p>Embroidery machine files created by a digitizer. Vector Me prepares the artwork; it does not invent stitch instructions.</p></div></div>
+    </section>
+
+    <section class="pricing" id="pricing">
+      <p class="eyebrow">SIMPLE PRICING</p><h2>See the result first. Pay only when you need more exports.</h2>
+      <div class="pricing-grid"><article class="card"><strong>First export</strong><span class="price">Free</span><p>Try Vector Me before buying anything.</p></article><article class="card"><strong>20 exports</strong><span class="price">$4.99</span><button class="primary buy-pack" data-pack="small" type="button">Buy 20</button></article><article class="card"><strong>100 exports</strong><span class="price">$9.99</span><button class="primary buy-pack" data-pack="pro" type="button">Buy 100</button></article></div>
+    </section>
   </main>
 
-  <footer>Vector Me by theAIgincy · Prepared for production; individual manufacturers may have additional requirements.</footer>
+  <dialog id="accountDialog" class="dialog"><form method="dialog" class="dialog-card"><button class="dialog-close" value="cancel" aria-label="Close">×</button><p class="eyebrow">VECTOR ME ACCOUNT</p><h2 id="authTitle">Sign in</h2><label class="field">Email<input id="authEmail" type="email" autocomplete="email" required /></label><label class="field">Password<input id="authPassword" type="password" minlength="10" maxlength="128" autocomplete="current-password" required /></label><p id="authError" class="error"></p><button id="authSubmit" class="primary" type="button">Sign in</button><button id="authToggle" class="link-button" type="button">Create an account instead</button><button id="logoutButton" class="secondary hidden" type="button">Sign out</button></form></dialog>
 
-  <script src="./vector-core.js"></script>
-  <script src="./app.js"></script>
+  <dialog id="projectsDialog" class="dialog"><div class="dialog-card wide"><button id="projectsClose" class="dialog-close" aria-label="Close">×</button><p class="eyebrow">MY VECTORS</p><h2>Saved projects</h2><div id="projectList" class="project-list"></div></div></dialog>
+
+  <footer>Vector Me by theAIgincy · Prepared for production; individual manufacturers may have additional requirements.</footer>
+  <script src="./vector-core.js"></script><script src="./zip.js"></script><script src="./app.js"></script>
 </body>
 </html>
