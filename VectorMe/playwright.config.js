@@ -9,17 +9,17 @@ module.exports = defineConfig({
   retries: 1,
   reporter: [['list'], ['html', { outputFolder: 'playwright-report', open: 'never' }]],
   use: {
-    baseURL: 'http://127.0.0.1:8080',
+    baseURL: 'http://localhost:8080',
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure'
   },
   webServer: {
     command: 'node server.js',
-    url: 'http://127.0.0.1:8080/api/health',
+    url: 'http://localhost:8080/api/health',
     reuseExistingServer: false,
     timeout: 30_000,
-    env: { ...process.env, PORT: '8080', NODE_ENV: 'test' }
+    env: { ...process.env, PORT: '8080', NODE_ENV: 'test', BASE_URL: 'http://localhost:8080' }
   },
   projects: [
     { name: 'desktop-chromium', use: { ...devices['Desktop Chrome'] } },
