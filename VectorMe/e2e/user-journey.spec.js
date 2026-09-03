@@ -26,6 +26,8 @@ async function uploadAndVectorize(page) {
   await expect(page.locator('#analysisPanel')).toBeVisible();
   await expect(page.locator('#analysisSummary')).toContainText('Source size');
   await page.getByRole('button', { name: 'T-shirt / apparel' }).click();
+  await expect(page.locator('#colorCount')).toHaveValue('4');
+  await expect(page.locator('#detail')).toHaveValue('medium');
   await page.getByRole('button', { name: 'Vectorize artwork' }).click();
   await expect(page.locator('#vectorPreview svg')).toBeVisible();
   await expect(page.locator('#printCheck')).toBeVisible();
@@ -53,6 +55,7 @@ test('customer can go from PNG to usable print-production files', async ({ page 
   await expect(page).toHaveTitle(/Vector Me/);
   await expect(page.getByRole('heading', { name: 'Turn this into a real vector file.' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Upload your artwork' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Try sample artwork' })).toBeVisible();
 
   await uploadAndVectorize(page);
 
@@ -71,6 +74,7 @@ test('customer can go from PNG to usable print-production files', async ({ page 
 
   const email = `qa-${Date.now()}-${testInfo.project.name.replace(/\W/g,'')}@example.com`;
   await page.getByRole('button', { name: 'Sign in' }).click();
+  await expect(page.locator('#authError')).toHaveText('');
   await page.getByRole('button', { name: 'Create an account instead' }).click();
   await page.locator('#authEmail').fill(email);
   await page.locator('#authPassword').fill('correct-horse-battery-staple');
@@ -92,6 +96,18 @@ test('customer can go from PNG to usable print-production files', async ({ page 
   await page.locator('#projectsClose').click();
 
   expect(pageErrors).toEqual([]);
+});
+
+test('sample artwork works without the user finding a file', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Try sample artwork' }).click();
+  await expect(page.locator('#workspace')).toBeVisible();
+  await expect(page.locator('#fileName')).toContainText('vector-me-sample.png');
+  await page.getByRole('button', { name: 'Hat / embroidery' }).click();
+  await expect(page.locator('#colorCount')).toHaveValue('4');
+  await expect(page.locator('#detail')).toHaveValue('low');
+  await page.getByRole('button', { name: 'Vectorize artwork' }).click();
+  await expect(page.locator('#vendorNextStep')).toContainText('embroidery digitizer');
 });
 
 test('second fresh project clearly routes a zero-credit user to pricing', async ({ page }) => {
