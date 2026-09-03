@@ -10,7 +10,7 @@ on:
       - '.github/workflows/micro-apps.yml'
 
 concurrency:
-  group: micro-apps-${{ github.head_ref || github.ref }}
+  group: micro-apps-${{ github.head_ref || github.ref_name }}
   cancel-in-progress: true
 
 jobs:
