@@ -1,0 +1,36 @@
+name: Vector Me
+
+on:
+  push:
+    paths:
+      - 'VectorMe/**'
+      - '.github/workflows/vector-me.yml'
+  pull_request:
+    paths:
+      - 'VectorMe/**'
+      - '.github/workflows/vector-me.yml'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: VectorMe
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install dependencies
+        run: npm install
+      - name: Run core and integration tests
+        run: npm test
+      - name: Production boot guard
+        run: |
+          if NODE_ENV=production node server.js 2>&1 | grep -q "SESSION_SECRET is required"; then
+            echo "Production secret guard verified"
+          else
+            echo "Production secret guard did not fire" && exit 1
+          fi
+      - name: Build Docker image
+        run: docker build -t vector-me:test .

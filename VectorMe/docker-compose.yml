@@ -1,0 +1,26 @@
+services:
+  vector-me:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: vectorme
+      POSTGRES_USER: vectorme
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - vector_me_postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vectorme -d vectorme"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+volumes:
+  vector_me_postgres:
