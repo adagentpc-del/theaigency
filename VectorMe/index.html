@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Vector Me — Make Your Artwork Print-Ready</title>
+  <meta name="description" content="Turn PNG, JPG and WEBP logos into clean, scalable SVG and vector PDF files for apparel, signs, stickers and print production." />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">theAIgincy <span>/ Vector Me</span></div>
+    <button id="resetButton" class="ghost" type="button">New file</button>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div>
+        <p class="eyebrow">PRINT-READY VECTOR CONVERSION</p>
+        <h1>Turn this into a real vector file.</h1>
+        <p class="lede">Upload an AI-generated logo or ordinary image and get scalable artwork ready for shirts, jerseys, signs, stickers and more.</p>
+      </div>
+      <div class="hero-note">No Illustrator required · Files stay in your browser in this MVP</div>
+    </section>
+
+    <section id="uploadCard" class="card upload-card">
+      <input id="fileInput" type="file" accept="image/png,image/jpeg,image/webp" hidden />
+      <button id="uploadButton" class="dropzone" type="button">
+        <strong>Upload your artwork</strong>
+        <span>PNG · JPG · WEBP</span>
+      </button>
+      <p id="uploadError" class="error" role="alert"></p>
+    </section>
+
+    <section id="workspace" class="workspace hidden" aria-live="polite">
+      <aside class="controls card">
+        <h2>1. What are you making?</h2>
+        <div id="useCases" class="chips"></div>
+
+        <h2>2. Conversion mode</h2>
+        <div class="mode-grid">
+          <button class="mode active" data-mode="trace" type="button"><strong>Trace</strong><span>Stay close to the original.</span></button>
+          <button class="mode" data-mode="rebuild" type="button"><strong>Rebuild</strong><span>Cleaner geometry and fewer artifacts.</span></button>
+        </div>
+
+        <h2>3. Colors</h2>
+        <label class="field">Palette size
+          <select id="colorCount">
+            <option value="2">2 colors</option>
+            <option value="4" selected>4 colors</option>
+            <option value="8">8 colors</option>
+            <option value="16">16 colors</option>
+          </select>
+        </label>
+        <label class="check"><input id="removeBackground" type="checkbox" checked /> Remove likely background</label>
+        <label class="field">Detail
+          <select id="detail">
+            <option value="low">Low</option>
+            <option value="medium" selected>Medium</option>
+            <option value="high">High</option>
+          </select>
+        </label>
+        <button id="vectorizeButton" class="primary" type="button">Vectorize artwork</button>
+        <p id="statusText" class="status"></p>
+      </aside>
+
+      <section class="preview card">
+        <div class="preview-head">
+          <div>
+            <p class="eyebrow">BEFORE / AFTER</p>
+            <h2 id="fileName">Artwork</h2>
+          </div>
+          <div class="tabs">
+            <button class="tab active" data-view="original" type="button">Original</button>
+            <button class="tab" data-view="vector" type="button">Vector</button>
+          </div>
+        </div>
+        <div class="canvas-wrap checker">
+          <img id="originalPreview" alt="Original uploaded artwork" />
+          <div id="vectorPreview" class="hidden" aria-label="Vectorized artwork preview"></div>
+        </div>
+
+        <section id="printCheck" class="print-check hidden">
+          <div>
+            <p class="eyebrow">PRINT CHECK</p>
+            <h3 id="printStatus">Ready</h3>
+          </div>
+          <ul id="printWarnings"></ul>
+        </section>
+
+        <div id="exports" class="exports hidden">
+          <button id="downloadSvg" class="primary" type="button">Download SVG</button>
+          <button id="downloadPdf" class="secondary" type="button">Download vector PDF</button>
+          <button id="downloadPng" class="secondary" type="button">Download transparent PNG</button>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <footer>Vector Me by theAIgincy · Prepared for production; individual manufacturers may have additional requirements.</footer>
+
+  <script src="./vector-core.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>
