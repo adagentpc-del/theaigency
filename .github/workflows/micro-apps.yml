@@ -7,10 +7,12 @@ on:
       - 'KeepOne/**'
       - 'Evidence/**'
       - 'KillTheLoop/**'
+      - '.github/workflows/micro-apps.yml'
 jobs:
-  build:
+  test-and-build:
     runs-on: macos-15
     strategy:
+      fail-fast: false
       matrix:
         app:
           - { dir: KeepOne, scheme: KeepOne }
@@ -23,6 +25,9 @@ jobs:
       - name: Generate project
         working-directory: ${{ matrix.app.dir }}
         run: xcodegen generate
-      - name: Build
+      - name: Unit tests
         working-directory: ${{ matrix.app.dir }}
-        run: xcodebuild -project ${{ matrix.app.scheme }}.xcodeproj -scheme ${{ matrix.app.scheme }} -sdk iphonesimulator -destination 'platform=iOS Simulator,name=iPhone 16 Pro' CODE_SIGNING_ALLOWED=NO build
+        run: xcodebuild test -project ${{ matrix.app.scheme }}.xcodeproj -scheme ${{ matrix.app.scheme }} -sdk iphonesimulator -destination 'platform=iOS Simulator,name=iPhone 16 Pro' CODE_SIGNING_ALLOWED=NO
+      - name: Release build
+        working-directory: ${{ matrix.app.dir }}
+        run: xcodebuild -project ${{ matrix.app.scheme }}.xcodeproj -scheme ${{ matrix.app.scheme }} -configuration Release -sdk iphonesimulator -destination 'platform=iOS Simulator,name=iPhone 16 Pro' CODE_SIGNING_ALLOWED=NO build

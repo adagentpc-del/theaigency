@@ -10,15 +10,25 @@ targets:
     type: application
     platform: iOS
     sources: [Evidence]
+    resources: [Resources]
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.theaigency.evidence
         PRODUCT_NAME: Evidence
-        INFOPLIST_KEY_CFBundleDisplayName: Evidence
+        MARKETING_VERSION: 1.0.0
+        CURRENT_PROJECT_VERSION: 1
         GENERATE_INFOPLIST_FILE: YES
-        INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
+        INFOPLIST_KEY_CFBundleDisplayName: Evidence
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
         INFOPLIST_KEY_NSPhotoLibraryUsageDescription: Add screenshots or images that document your own wins and feedback.
+        INFOPLIST_KEY_NSFaceIDUsageDescription: Lock and unlock your private Evidence vault.
         TARGETED_DEVICE_FAMILY: 1
+        SUPPORTS_MACCATALYST: NO
     scheme:
-      testTargets: []
+      testTargets: [EvidenceTests]
+  EvidenceTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources: [EvidenceTests]
+    dependencies:
+      - target: Evidence
