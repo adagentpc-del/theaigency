@@ -31,6 +31,7 @@ async function uploadAndVectorize(page) {
   await expect(page.locator('#printCheck')).toBeVisible();
   await expect(page.locator('#exports')).toBeVisible();
   await expect(page.locator('#statusText')).toContainText('vector shapes');
+  await expect(page.locator('#vendorNextStep')).toContainText('Best files to send your printer');
 }
 
 async function expectDownload(page, buttonName, signature) {
@@ -66,7 +67,7 @@ test('customer can go from PNG to usable print-production files', async ({ page 
 
   await expectDownload(page, 'Download vector PDF', Buffer.from('%PDF'));
   await expectDownload(page, 'Download transparent PNG', Buffer.from([0x89,0x50,0x4e,0x47]));
-  await expectDownload(page, 'Download all', Buffer.from('PK'));
+  await expectDownload(page, 'Download printer package (.ZIP)', Buffer.from('PK'));
 
   const email = `qa-${Date.now()}-${testInfo.project.name.replace(/\W/g,'')}@example.com`;
   await page.getByRole('button', { name: 'Sign in' }).click();
@@ -107,10 +108,8 @@ test('second fresh project clearly routes a zero-credit user to pricing', async 
 
   await page.getByRole('button', { name: 'New file' }).click();
   await uploadAndVectorize(page);
-  let message = '';
-  page.once('dialog', async d => { message = d.message(); await d.accept(); });
   await page.getByRole('button', { name: 'Download SVG' }).click();
-  await expect.poll(() => message).toContain('export credit');
+  await expect(page.locator('#vmToast')).toContainText('export credit');
   await expect(page.locator('#pricing')).toBeVisible();
   await expect(page.locator('#creditBadge')).toContainText('0 credits');
 });
