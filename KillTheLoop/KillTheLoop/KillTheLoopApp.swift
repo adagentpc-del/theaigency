@@ -334,7 +334,7 @@ struct KLScheduleView: View {
     }
 
     private func nextSaturday() -> Date {
-        Calendar.current.nextDate(after: .now, matching: DateComponents(weekday: 7, hour: 10), matchingPolicy: .nextTime) ?? Date().addingTimeInterval(72 * 3600)
+        Calendar.current.nextDate(after: .now, matching: DateComponents(hour: 10, weekday: 7), matchingPolicy: .nextTime) ?? Date().addingTimeInterval(72 * 3600)
     }
 }
 
@@ -347,7 +347,7 @@ struct KLHistoryView: View {
             List {
                 ForEach(store.closed) { item in
                     HStack(spacing: 12) {
-                        Image(systemName: icon(item.status)).foregroundStyle(item.status == "killed" ? .red : .tint)
+                        Image(systemName: icon(item.status)).foregroundStyle(item.status == "killed" ? Color.red : Color.accentColor)
                         VStack(alignment: .leading, spacing: 3) {
                             Text(item.text)
                             Text(item.status.capitalized).font(.caption).foregroundStyle(.secondary)
