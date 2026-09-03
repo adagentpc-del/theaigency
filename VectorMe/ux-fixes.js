@@ -8,6 +8,12 @@
   const printCheck = document.getElementById('printCheck');
   const downloadAll = document.getElementById('downloadAll');
   const useCases = document.getElementById('useCases');
+  const colorCount = document.getElementById('colorCount');
+  const detail = document.getElementById('detail');
+  const removeBackground = document.getElementById('removeBackground');
+  const statusText = document.getElementById('statusText');
+  const fileInput = document.getElementById('fileInput');
+  const uploadCard = document.getElementById('uploadCard');
   const exportButtons = ['downloadSvg','downloadPdf','downloadPng','downloadAll'].map(id => document.getElementById(id)).filter(Boolean);
   let exportIntent = false;
 
@@ -76,6 +82,58 @@
     showToast.timer = setTimeout(() => { toast.hidden = true; }, 5000);
   }
 
+  function applyPreset(useCase) {
+    if (!colorCount || !detail || !removeBackground) return;
+    let colors = '4', level = 'medium', remove = true;
+    if (/embroidery/i.test(useCase)) { colors = '4'; level = 'low'; }
+    else if (/vinyl|decal/i.test(useCase)) { colors = '2'; level = 'low'; }
+    else if (/screen printing/i.test(useCase)) { colors = '4'; level = 'medium'; }
+    else if (/jersey|uniform/i.test(useCase)) { colors = '4'; level = 'medium'; }
+    else if (/sign|banner/i.test(useCase)) { colors = '4'; level = 'medium'; }
+    else if (/sticker|packaging/i.test(useCase)) { colors = '8'; level = 'medium'; }
+    else if (/web|digital/i.test(useCase)) { colors = '8'; level = 'high'; }
+    else if (/just give me/i.test(useCase)) { colors = '8'; level = 'high'; }
+    colorCount.value = colors;
+    detail.value = level;
+    removeBackground.checked = remove;
+    if (statusText && document.getElementById('workspace') && !document.getElementById('workspace').classList.contains('hidden')) {
+      statusText.textContent = `Recommended ${useCase} settings applied: ${colors} colors, ${level} detail.`;
+    }
+  }
+
+  function addSampleButton() {
+    if (!uploadCard || !fileInput || document.getElementById('trySampleButton')) return;
+    const button = document.createElement('button');
+    button.id = 'trySampleButton';
+    button.type = 'button';
+    button.className = 'secondary';
+    button.textContent = 'Try sample artwork';
+    button.style.display = 'block';
+    button.style.margin = '12px auto 0';
+    button.addEventListener('click', () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = 256; canvas.height = 256;
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0,0,256,256);
+      ctx.fillStyle = '#111111';
+      ctx.beginPath(); ctx.arc(128,128,90,0,Math.PI*2); ctx.fill();
+      ctx.globalCompositeOperation = 'destination-out';
+      ctx.beginPath(); ctx.arc(128,128,52,0,Math.PI*2); ctx.fill();
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.fillStyle = '#111111';
+      ctx.fillRect(118,36,20,184);
+      canvas.toBlob(blob => {
+        if (!blob) return;
+        const file = new File([blob], 'vector-me-sample.png', { type: 'image/png' });
+        const transfer = new DataTransfer();
+        transfer.items.add(file);
+        fileInput.files = transfer.files;
+        fileInput.dispatchEvent(new Event('change', { bubbles: true }));
+      }, 'image/png');
+    });
+    uploadCard.appendChild(button);
+  }
+
   window.alert = showToast;
 
   exportButtons.forEach(button => button.addEventListener('click', () => { exportIntent = true; }));
@@ -90,7 +148,12 @@
   if (authTitle) new MutationObserver(syncAuthCopy).observe(authTitle, { childList: true, characterData: true, subtree: true });
   if (authToggle) authToggle.addEventListener('click', () => queueMicrotask(syncAuthCopy));
   if (printCheck) new MutationObserver(syncNextStep).observe(printCheck, { attributes: true, childList: true, subtree: true });
-  if (useCases) useCases.addEventListener('click', () => queueMicrotask(syncNextStep));
+  if (useCases) useCases.addEventListener('click', event => {
+    const chip = event.target.closest('.chip');
+    if (chip) applyPreset(chip.textContent || 'General printing');
+    queueMicrotask(syncNextStep);
+  });
+  addSampleButton();
   syncAuthCopy();
   syncNextStep();
 })();
