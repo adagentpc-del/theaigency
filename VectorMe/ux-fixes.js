@@ -15,7 +15,6 @@
   const fileInput = document.getElementById('fileInput');
   const uploadCard = document.getElementById('uploadCard');
   const exportButtons = ['downloadSvg','downloadPdf','downloadPng','downloadAll'].map(id => document.getElementById(id)).filter(Boolean);
-  let exportIntent = false;
 
   function syncAuthCopy() {
     if (!authTitle || !authSubmit || authSubmit.classList.contains('hidden')) return;
@@ -137,15 +136,12 @@
   window.alert = showToast;
 
   exportButtons.forEach(button => button.addEventListener('click', () => {
-    exportIntent = true;
-    setTimeout(() => { if (!authDialog?.open) exportIntent = false; }, 1000);
+    queueMicrotask(() => {
+      if (authDialog?.open && authError && localStorage.getItem('vm_free_project_export_used') === '1') {
+        authError.textContent = 'Your free project export has been used. Sign in or create an account to use purchased export credits.';
+      }
+    });
   }));
-  if (authDialog) new MutationObserver(() => {
-    if (authDialog.open && exportIntent && authError && localStorage.getItem('vm_free_project_export_used') === '1') {
-      authError.textContent = 'Your free project export has been used. Sign in or create an account to use purchased export credits.';
-      exportIntent = false;
-    }
-  }).observe(authDialog, { attributes: true, attributeFilter: ['open'] });
 
   if (downloadAll) downloadAll.textContent = 'Download printer package (.ZIP)';
   if (authTitle) new MutationObserver(syncAuthCopy).observe(authTitle, { childList: true, characterData: true, subtree: true });
