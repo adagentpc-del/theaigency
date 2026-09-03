@@ -14,6 +14,19 @@ final class KillTheLoopTests: XCTestCase {
         XCTAssertEqual(store.closed.first?.status, "done")
     }
 
+    @MainActor
+    func testScheduledLoopReturnsWhenDue() {
+        let store = KLStore()
+        store.active = []
+        store.closed = []
+        store.add("Return package")
+        _ = store.resolveCurrent(status: "scheduled", scheduledFor: Date().addingTimeInterval(-60))
+        XCTAssertEqual(store.active.count, 0)
+        store.returnScheduledDue()
+        XCTAssertEqual(store.active.first?.text, "Return package")
+        XCTAssertTrue(store.closed.isEmpty)
+    }
+
     func testLoopRoundTripsCodable() throws {
         let item = KLItem(text: "Return package")
         let data = try JSONEncoder().encode(item)

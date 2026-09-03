@@ -4,8 +4,8 @@ Private local iOS vault for compliments, wins, screenshots, feedback, milestones
 
 ## Architecture
 - SwiftUI, iOS 17+
-- Codable/UserDefaults local persistence
-- PhotosPicker for premium image attachments
+- App-private Application Support vault with complete file protection
+- PhotosPicker with on-device image normalization for premium attachments
 - LocalAuthentication for optional device authentication
 - StoreKit 2 non-consumable lifetime entitlement
 - No account, backend, AI-generated affirmations, tracking, or ads
@@ -16,7 +16,14 @@ Private local iOS vault for compliments, wins, screenshots, feedback, milestones
 - Product ID: `com.theaigency.evidence.lifetime`
 - Bundle ID: `com.theaigency.evidence`
 - Resurfacing favors favorites and least-recently shown entries
-- Sensitive UI is marked privacy-sensitive and can relock when the app leaves active state
+- Users can favorite, search, and permanently delete their own evidence
+- Sensitive UI is marked privacy-sensitive and relocks when the app leaves active state if device authentication is enabled
+
+## UX/accessibility
+- System typography and controls support Dynamic Type and standard iOS tap targets
+- Sensitive destructive actions require confirmation
+- VoiceOver labels cover key icon-only controls and attached images
+- Light/Dark Mode use semantic system colors
 
 ## Build
 Run `xcodegen generate`, then build/test the `Evidence` scheme. CI runs unit tests and a Release simulator build.

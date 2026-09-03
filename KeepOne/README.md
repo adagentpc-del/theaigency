@@ -4,8 +4,8 @@ Local-first iOS decluttering game: photograph contenders, make head-to-head choi
 
 ## Architecture
 - SwiftUI, iOS 17+
-- JSON/Codable persistence in UserDefaults for battle state and history
-- PhotosPicker for on-device image selection
+- App-private Application Support persistence for battle state/history
+- PhotosPicker with on-device image normalization before persistence
 - StoreKit 2 non-consumable lifetime entitlement
 - No account, backend, AI API, tracking, or ads
 
@@ -16,6 +16,13 @@ Local-first iOS decluttering game: photograph contenders, make head-to-head choi
 - Bundle ID: `com.theaigency.keepone`
 - Pairing engine limits comparisons while avoiding duplicate pairs
 - Every choice records winner/loser IDs so Undo is exact
+- Cut-list items can be marked Sell, Donate, Keep Anyway, or Undecided
+
+## UX/accessibility
+- System typography and controls support Dynamic Type and standard iOS tap targets
+- Core controls have VoiceOver labels
+- Light/Dark Mode are inherited from system semantic colors
+- No essential information depends on animation
 
 ## Build
 Run `xcodegen generate`, then build/test the `KeepOne` scheme. CI runs unit tests and a Release simulator build.

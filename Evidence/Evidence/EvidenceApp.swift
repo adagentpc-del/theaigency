@@ -17,7 +17,6 @@ struct EVItem: Identifiable, Codable, Hashable {
 @MainActor
 final class EVStore: ObservableObject {
     @Published var items: [EVItem] = [] { didSet { save() } }
-    private let key = "evidence.store.v3"
 
     init() { load() }
 
@@ -27,6 +26,8 @@ final class EVStore: ObservableObject {
         guard let index = items.firstIndex(where: { $0.id == id }) else { return }
         items[index].favorite.toggle()
     }
+
+    func delete(_ id: UUID) { items.removeAll { $0.id == id } }
 
     func nextReceipt() -> EVItem? {
         guard !items.isEmpty else { return nil }
@@ -39,13 +40,10 @@ final class EVStore: ObservableObject {
         return chosen
     }
 
-    private func save() {
-        if let data = try? JSONEncoder().encode(items) { UserDefaults.standard.set(data, forKey: key) }
-    }
+    private func save() { EVFileStorage.save(items) }
 
     private func load() {
-        guard let data = UserDefaults.standard.data(forKey: key), let decoded = try? JSONDecoder().decode([EVItem].self, from: data) else { return }
-        items = decoded
+        if let decoded = EVFileStorage.load([EVItem].self) { items = decoded }
     }
 }
 
@@ -56,9 +54,7 @@ final class EVLockManager: ObservableObject {
         didSet { UserDefaults.standard.set(biometricLock, forKey: "evidence.biometricLock") }
     }
 
-    init() {
-        biometricLock = UserDefaults.standard.bool(forKey: "evidence.biometricLock")
-    }
+    init() { biometricLock = UserDefaults.standard.bool(forKey: "evidence.biometricLock") }
 
     func unlock() async {
         guard biometricLock else { unlocked = true; return }
@@ -241,9 +237,11 @@ struct EVMainView: View {
                     Button { showingSettings = true } label: { Image(systemName: "gearshape") }.accessibilityLabel("Settings")
                 }
             }
-            .sheet(isPresented: $showingAdd) { EVAddView() }
+            .sheet(isPresented: $showingAdd, onDismiss: { if receipt == nil { receipt = store.nextReceipt() } }) { EVAddView() }
             .sheet(isPresented: $showingMode) { EVModeView() }
-            .sheet(isPresented: $showingVault) { EVVaultView() }
+            .sheet(isPresented: $showingVault, onDismiss: {
+                if let receipt, !store.items.contains(where: { $0.id == receipt.id }) { self.receipt = store.nextReceipt() }
+            }) { EVVaultView() }
             .sheet(isPresented: $showingSettings) { EVSettingsView() }
             .onAppear { if receipt == nil { receipt = store.nextReceipt() } }
         }
@@ -291,7 +289,12 @@ struct EVAddView: View {
                 TextField("Source or person (optional)", text: $source)
                 if purchase.unlocked {
                     PhotosPicker("Attach screenshot or photo", selection: $photo, matching: .images)
-                        .onChange(of: photo) { _, item in Task { imageData = try? await item?.loadTransferable(type: Data.self) } }
+                        .onChange(of: photo) { _, item in
+                            Task {
+                                let rawData = try? await item?.loadTransferable(type: Data.self)
+                                imageData = EVImagePipeline.normalizedJPEG(rawData)
+                            }
+                        }
                 } else {
                     Text("Screenshot attachments are included in the lifetime unlock.").font(.footnote).foregroundStyle(.secondary)
                 }
@@ -338,6 +341,7 @@ struct EVVaultView: View {
     @EnvironmentObject var store: EVStore
     @Environment(\.dismiss) var dismiss
     @State private var search = ""
+    @State private var pendingDelete: EVItem?
 
     private var filtered: [EVItem] {
         search.isEmpty ? store.items : store.items.filter {
@@ -350,18 +354,29 @@ struct EVVaultView: View {
             List {
                 ForEach(filtered) { item in
                     VStack(alignment: .leading, spacing: 5) {
-                        HStack { Text(item.kind).font(.caption.bold()).foregroundStyle(.secondary); if item.favorite { Image(systemName: "star.fill").font(.caption).foregroundStyle(.yellow) } }
+                        HStack {
+                            Text(item.kind).font(.caption.bold()).foregroundStyle(.secondary)
+                            if item.favorite { Image(systemName: "star.fill").font(.caption).foregroundStyle(.yellow).accessibilityLabel("Favorite") }
+                        }
                         Text(item.text).lineLimit(3)
                         if !item.source.isEmpty { Text(item.source).font(.caption).foregroundStyle(.secondary) }
                     }
                     .swipeActions {
-                        Button { store.toggleFavorite(item.id) } label: { Label(item.favorite ? "Unfavorite" : "Favorite", systemImage: item.favorite ? "star.slash" : "star") }
+                        Button(role: .destructive) { pendingDelete = item } label: { Label("Delete", systemImage: "trash") }
+                        Button { store.toggleFavorite(item.id) } label: { Label(item.favorite ? "Unfavorite" : "Favorite", systemImage: item.favorite ? "star.slash" : "star") }.tint(.yellow)
                     }
                 }
             }
             .searchable(text: $search)
             .navigationTitle("Vault")
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
+            .confirmationDialog("Delete this evidence?", isPresented: Binding(get: { pendingDelete != nil }, set: { if !$0 { pendingDelete = nil } }), titleVisibility: .visible) {
+                Button("Delete permanently", role: .destructive) {
+                    if let pendingDelete { store.delete(pendingDelete.id) }
+                    pendingDelete = nil
+                }
+                Button("Cancel", role: .cancel) { pendingDelete = nil }
+            } message: { Text("This removes the entry and any attached image from the local vault.") }
         }
     }
 }
@@ -376,7 +391,7 @@ struct EVSettingsView: View {
             Form {
                 Section("Privacy") {
                     Toggle("Require Face ID / device authentication", isOn: $lock.biometricLock)
-                    Text("Evidence stays on this device. The app does not upload your entries or screenshots.").font(.footnote).foregroundStyle(.secondary)
+                    Text("Evidence stays on this device in app-private protected storage. The app does not upload your entries or screenshots.").font(.footnote).foregroundStyle(.secondary)
                 }
                 Section("Lifetime Unlock") {
                     Button(purchase.product.map { "Unlock — \($0.displayPrice)" } ?? "Lifetime unlock") { Task { await purchase.purchase() } }.disabled(purchase.unlocked)

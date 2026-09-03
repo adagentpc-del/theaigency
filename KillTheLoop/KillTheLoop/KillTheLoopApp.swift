@@ -236,6 +236,7 @@ struct KLZeroView: View {
 
 struct KLLoopView: View {
     @EnvironmentObject var store: KLStore
+    @State private var doing = false
     @State private var scheduling = false
     @State private var confirmingKill = false
 
@@ -250,7 +251,7 @@ struct KLLoopView: View {
             }
             Spacer()
             Text("\(store.active.count) open \(store.active.count == 1 ? "loop" : "loops")").font(.caption).foregroundStyle(.secondary)
-            Button("DO IT") { store.resolveCurrent(status: "done") }.buttonStyle(.borderedProminent).controlSize(.large)
+            Button("DO IT") { doing = true }.buttonStyle(.borderedProminent).controlSize(.large)
             Button("SCHEDULE IT") { scheduling = true }.buttonStyle(.bordered).controlSize(.large)
             Button("KILL IT", role: .destructive) { confirmingKill = true }.buttonStyle(.bordered).controlSize(.large)
         }
@@ -261,7 +262,69 @@ struct KLLoopView: View {
             Button("Kill the loop", role: .destructive) { store.resolveCurrent(status: "killed") }
             Button("Cancel", role: .cancel) {}
         } message: { Text("This records a deliberate decision not to do it. You can still see it in History.") }
+        .sheet(isPresented: $doing) { if let current { KLDoItView(item: current) } }
         .sheet(isPresented: $scheduling) { if let current { KLScheduleView(item: current) } }
+    }
+}
+
+struct KLDoItView: View {
+    @EnvironmentObject var store: KLStore
+    @Environment(\.dismiss) var dismiss
+    let item: KLItem
+    @State private var started = false
+    @State private var endDate: Date?
+
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 24) {
+                Text(item.text).font(.title.bold()).multilineTextAlignment(.center)
+                if !started {
+                    Text("How much runway do you want?").font(.headline)
+                    Text("The timer is optional. It exists to create a starting boundary, not a deadline.").font(.subheadline).foregroundStyle(.secondary).multilineTextAlignment(.center)
+                    HStack(spacing: 10) {
+                        timerButton("5 MIN", minutes: 5)
+                        timerButton("10 MIN", minutes: 10)
+                        timerButton("15 MIN", minutes: 15)
+                    }
+                    Button("NO TIMER") { started = true; endDate = nil }.buttonStyle(.bordered)
+                } else {
+                    Spacer()
+                    Text("GO CLOSE IT.").font(.largeTitle.bold()).multilineTextAlignment(.center)
+                    if let endDate {
+                        TimelineView(.periodic(from: .now, by: 1)) { context in
+                            let remaining = max(0, Int(endDate.timeIntervalSince(context.date)))
+                            VStack(spacing: 8) {
+                                Text(timeString(remaining)).font(.system(size: 48, weight: .semibold, design: .monospaced)).contentTransition(.numericText())
+                                Text(remaining > 0 ? "Use the boundary. You can finish early." : "Time's up. Decide what happened.").font(.footnote).foregroundStyle(.secondary).multilineTextAlignment(.center)
+                            }
+                        }
+                    } else {
+                        Text("No countdown. Just the next move.").foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    Button("DONE") {
+                        if store.active.first?.id == item.id { store.resolveCurrent(status: "done") }
+                        dismiss()
+                    }.buttonStyle(.borderedProminent).controlSize(.large)
+                    Button("NOT DONE — PUT IT BACK") { dismiss() }.buttonStyle(.bordered)
+                }
+                Spacer()
+            }
+            .padding(24)
+            .navigationTitle("Do It")
+            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } } }
+        }
+    }
+
+    private func timerButton(_ title: String, minutes: Int) -> some View {
+        Button(title) {
+            endDate = Date().addingTimeInterval(Double(minutes * 60))
+            started = true
+        }.buttonStyle(.borderedProminent)
+    }
+
+    private func timeString(_ seconds: Int) -> String {
+        String(format: "%02d:%02d", seconds / 60, seconds % 60)
     }
 }
 
@@ -314,7 +377,7 @@ struct KLScheduleView: View {
                 Section("Quick") {
                     Button("Later today") { schedule(Date().addingTimeInterval(3 * 3600)) }
                     Button("Tomorrow") { schedule(Calendar.current.date(byAdding: .day, value: 1, to: .now) ?? .now) }
-                    Button("This weekend") { schedule(nextSaturday()) }
+                    Button("This weekend") { schedule(nextWeekendMorning()) }
                 }
                 Section("Choose a time") {
                     DatePicker("When", selection: $customDate, in: Date()..., displayedComponents: [.date, .hourAndMinute])
@@ -333,8 +396,17 @@ struct KLScheduleView: View {
         dismiss()
     }
 
-    private func nextSaturday() -> Date {
-        Calendar.current.nextDate(after: .now, matching: DateComponents(hour: 10, weekday: 7), matchingPolicy: .nextTime) ?? Date().addingTimeInterval(72 * 3600)
+    private func nextWeekendMorning() -> Date {
+        let calendar = Calendar.current
+        let weekday = calendar.component(.weekday, from: .now)
+        if weekday == 7 {
+            return calendar.nextDate(after: .now, matching: DateComponents(hour: 10, weekday: 1), matchingPolicy: .nextTime) ?? Date().addingTimeInterval(24 * 3600)
+        }
+        if weekday == 1 {
+            let todayTen = calendar.date(bySettingHour: 10, minute: 0, second: 0, of: .now) ?? .now
+            if todayTen > .now { return todayTen }
+        }
+        return calendar.nextDate(after: .now, matching: DateComponents(hour: 10, weekday: 7), matchingPolicy: .nextTime) ?? Date().addingTimeInterval(72 * 3600)
     }
 }
 

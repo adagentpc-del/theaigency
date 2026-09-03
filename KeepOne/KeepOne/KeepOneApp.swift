@@ -8,6 +8,7 @@ struct KOContender: Identifiable, Codable, Hashable {
     var imageData: Data?
     var wins = 0
     var losses = 0
+    var disposition: String?
     var score: Int { wins - losses }
     var winRate: Double { wins + losses == 0 ? 0 : Double(wins) / Double(wins + losses) }
 }
@@ -63,7 +64,6 @@ enum KOPairingEngine {
 final class KOStore: ObservableObject {
     @Published var current: KOBattle?
     @Published var history: [KOBattle] = []
-    private let key = "keepone.store.v3"
     private struct Snapshot: Codable { let current: KOBattle?; let history: [KOBattle] }
 
     init() { load() }
@@ -104,14 +104,25 @@ final class KOStore: ObservableObject {
         save()
     }
 
-    func clearCurrent() { current = nil; save() }
-
-    private func save() {
-        if let data = try? JSONEncoder().encode(Snapshot(current: current, history: history)) { UserDefaults.standard.set(data, forKey: key) }
+    func setDisposition(itemID: UUID, disposition: String) {
+        if var battle = current, let index = battle.contenders.firstIndex(where: { $0.id == itemID }) {
+            battle.contenders[index].disposition = disposition
+            current = battle
+        }
+        for battleIndex in history.indices {
+            if let contenderIndex = history[battleIndex].contenders.firstIndex(where: { $0.id == itemID }) {
+                history[battleIndex].contenders[contenderIndex].disposition = disposition
+            }
+        }
+        save()
     }
 
+    func clearCurrent() { current = nil; save() }
+
+    private func save() { KOFileStorage.save(Snapshot(current: current, history: history)) }
+
     private func load() {
-        guard let data = UserDefaults.standard.data(forKey: key), let snapshot = try? JSONDecoder().decode(Snapshot.self, from: data) else { return }
+        guard let snapshot = KOFileStorage.load(Snapshot.self) else { return }
         current = snapshot.current
         history = snapshot.history
     }
@@ -301,7 +312,8 @@ struct KONewBattleView: View {
                     .onChange(of: photo) { _, item in
                         Task {
                             guard contenders.count < maxItems else { showLimit = true; photo = nil; return }
-                            let data = try? await item?.loadTransferable(type: Data.self)
+                            let rawData = try? await item?.loadTransferable(type: Data.self)
+                            let data = KOImagePipeline.normalizedJPEG(rawData)
                             let cleanName = draft.trimmingCharacters(in: .whitespacesAndNewlines)
                             contenders.append(KOContender(name: cleanName.isEmpty ? "Item \(contenders.count + 1)" : cleanName, imageData: data))
                             draft = ""
@@ -389,7 +401,21 @@ struct KOResultsView: View {
                 VStack(alignment: .leading, spacing: 12) {
                     Text("THE CUT LIST").font(.headline)
                     Text("These consistently lost when you had to choose. You decide what happens next.").font(.subheadline).foregroundStyle(.secondary)
-                    ForEach(ranked.suffix(max(1, ranked.count / 3))) { item in Text("\(item.name) · \(item.wins) wins / \(item.losses) losses") }
+                    ForEach(ranked.suffix(max(1, ranked.count / 3))) { item in
+                        HStack(alignment: .center, spacing: 12) {
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text(item.name).font(.body.weight(.medium))
+                                Text("\(item.wins) wins / \(item.losses) losses").font(.caption).foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                            Menu(item.disposition ?? "DECIDE") {
+                                Button("Sell") { store.setDisposition(itemID: item.id, disposition: "Sell") }
+                                Button("Donate") { store.setDisposition(itemID: item.id, disposition: "Donate") }
+                                Button("Keep Anyway") { store.setDisposition(itemID: item.id, disposition: "Keep Anyway") }
+                                Button("Undecided") { store.setDisposition(itemID: item.id, disposition: "Undecided") }
+                            }.buttonStyle(.bordered)
+                        }
+                    }
                 }.frame(maxWidth: .infinity, alignment: .leading).padding().background(.thinMaterial, in: RoundedRectangle(cornerRadius: 20))
 
                 ShareLink(item: "My \(battle.category) battle had \(battle.contenders.count) contenders. Champion: \(ranked.first?.name ?? "")") {
