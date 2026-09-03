@@ -8,9 +8,15 @@ on:
       - 'Evidence/**'
       - 'KillTheLoop/**'
       - '.github/workflows/micro-apps.yml'
+
+concurrency:
+  group: micro-apps-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test-and-build:
     runs-on: macos-15
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
