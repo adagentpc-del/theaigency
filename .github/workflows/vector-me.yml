@@ -1,0 +1,22 @@
+name: Vector Me
+
+on:
+  push:
+    paths:
+      - 'VectorMe/**'
+      - '.github/workflows/vector-me.yml'
+  pull_request:
+    paths:
+      - 'VectorMe/**'
+      - '.github/workflows/vector-me.yml'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Test vector core
+        run: node VectorMe/test-vector-core.js
