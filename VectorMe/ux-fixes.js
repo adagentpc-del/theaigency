@@ -136,7 +136,10 @@
 
   window.alert = showToast;
 
-  exportButtons.forEach(button => button.addEventListener('click', () => { exportIntent = true; }));
+  exportButtons.forEach(button => button.addEventListener('click', () => {
+    exportIntent = true;
+    setTimeout(() => { if (!authDialog?.open) exportIntent = false; }, 1000);
+  }));
   if (authDialog) new MutationObserver(() => {
     if (authDialog.open && exportIntent && authError && localStorage.getItem('vm_free_project_export_used') === '1') {
       authError.textContent = 'Your free project export has been used. Sign in or create an account to use purchased export credits.';
