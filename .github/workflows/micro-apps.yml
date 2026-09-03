@@ -1,0 +1,39 @@
+name: Micro Apps iOS
+on:
+  push:
+    branches: [chatgpt/microapps-sept3]
+  pull_request:
+    paths:
+      - 'KeepOne/**'
+      - 'Evidence/**'
+      - 'KillTheLoop/**'
+      - '.github/workflows/micro-apps.yml'
+
+concurrency:
+  group: micro-apps-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  test-and-build:
+    runs-on: macos-15
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        app:
+          - { dir: KeepOne, scheme: KeepOne }
+          - { dir: Evidence, scheme: Evidence }
+          - { dir: KillTheLoop, scheme: KillTheLoop }
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Generate project
+        working-directory: ${{ matrix.app.dir }}
+        run: xcodegen generate
+      - name: Unit tests
+        working-directory: ${{ matrix.app.dir }}
+        run: xcodebuild test -project ${{ matrix.app.scheme }}.xcodeproj -scheme ${{ matrix.app.scheme }} -sdk iphonesimulator -destination 'platform=iOS Simulator,name=iPhone 16 Pro' CODE_SIGNING_ALLOWED=NO
+      - name: Release build
+        working-directory: ${{ matrix.app.dir }}
+        run: xcodebuild -project ${{ matrix.app.scheme }}.xcodeproj -scheme ${{ matrix.app.scheme }} -configuration Release -sdk iphonesimulator -destination 'platform=iOS Simulator,name=iPhone 16 Pro' CODE_SIGNING_ALLOWED=NO build

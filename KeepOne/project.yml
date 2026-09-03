@@ -1,0 +1,34 @@
+name: KeepOne
+options:
+  bundleIdPrefix: com.theaigency
+settings:
+  base:
+    IPHONEOS_DEPLOYMENT_TARGET: 17.0
+    SWIFT_VERSION: 5.0
+targets:
+  KeepOne:
+    type: application
+    platform: iOS
+    sources: [KeepOne]
+    resources: [Resources]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.theaigency.keepone
+        MARKETING_VERSION: 1.0.0
+        CURRENT_PROJECT_VERSION: 1
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: Keep One
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_NSPhotoLibraryUsageDescription: Choose photos of items you want to compare while decluttering.
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        TARGETED_DEVICE_FAMILY: 1
+        SUPPORTS_MACCATALYST: NO
+    scheme:
+      testTargets: [KeepOneTests]
+  KeepOneTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources: [KeepOneTests]
+    hostApplication: KeepOne
+    dependencies:
+      - target: KeepOne
