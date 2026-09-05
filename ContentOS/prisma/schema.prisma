@@ -1,0 +1,243 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role { OWNER ADMIN EDITOR REVIEWER ANALYST }
+enum Provider { INSTAGRAM TIKTOK YOUTUBE FACEBOOK LINKEDIN X PINTEREST THREADS }
+enum AccountStatus { CONNECTED NEEDS_REAUTH RATE_LIMITED PAUSED ERROR }
+enum AssetStatus { UPLOADING READY PROCESSING FAILED ARCHIVED }
+enum JobStatus { QUEUED RUNNING SUCCEEDED FAILED CANCELED }
+enum PostStatus { DRAFT NEEDS_APPROVAL SCHEDULED QUEUED PUBLISHING PUBLISHED FAILED CANCELED }
+enum InboxType { COMMENT MENTION MESSAGE REVIEW SYSTEM }
+enum NotificationType { ENGAGEMENT POST_FAILED APPROVAL_REQUIRED TOKEN_EXPIRING ACCOUNT_HEALTH VIRAL_MOMENT STRATEGY SYSTEM }
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  createdAt DateTime @default(now())
+  memberships WorkspaceMember[]
+}
+
+model Workspace {
+  id        String   @id @default(cuid())
+  name      String
+  timezone  String   @default("America/New_York")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  members   WorkspaceMember[]
+  accounts  SocialAccount[]
+  assets    MediaAsset[]
+  projects  ContentProject[]
+  posts     ScheduledPost[]
+  inbox     InboxItem[]
+  notifications Notification[]
+  auditLogs AuditLog[]
+}
+
+model WorkspaceMember {
+  id          String @id @default(cuid())
+  workspaceId String
+  userId      String
+  role        Role   @default(EDITOR)
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user        User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([workspaceId, userId])
+}
+
+model SocialAccount {
+  id            String @id @default(cuid())
+  workspaceId   String
+  provider      Provider
+  providerUid   String
+  handle        String
+  displayName   String?
+  avatarUrl     String?
+  accountType   String?
+  status        AccountStatus @default(CONNECTED)
+  niche         String?
+  audience      String?
+  editorialRole String?
+  accessTokenEnc String
+  refreshTokenEnc String?
+  tokenExpiresAt DateTime?
+  scopes        String[]
+  metadata      Json?
+  lastSyncAt    DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  workspace     Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  posts         PostTarget[]
+  inboxItems    InboxItem[]
+  @@unique([provider, providerUid])
+  @@index([workspaceId, provider, status])
+}
+
+model MediaAsset {
+  id          String @id @default(cuid())
+  workspaceId String
+  filename    String
+  mimeType    String
+  storageKey  String
+  durationMs  Int?
+  width       Int?
+  height      Int?
+  source      String @default("upload")
+  status      AssetStatus @default(UPLOADING)
+  transcript  String?
+  metadata    Json?
+  createdAt   DateTime @default(now())
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  projects    ContentProject[]
+  renders     RenderJob[]
+}
+
+model ContentProject {
+  id          String @id @default(cuid())
+  workspaceId String
+  sourceAssetId String?
+  title       String
+  objective   String?
+  audience    String?
+  contentPillars String[]
+  aiAnalysis  Json?
+  editPlan    Json?
+  status      String @default("draft")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  sourceAsset MediaAsset? @relation(fields: [sourceAssetId], references: [id])
+  variants    ContentVariant[]
+  posts       ScheduledPost[]
+}
+
+model ContentVariant {
+  id          String @id @default(cuid())
+  projectId   String
+  name        String
+  hook        String?
+  caption     String?
+  cta         String?
+  hashtags    String[]
+  startMs     Int?
+  endMs       Int?
+  aspectRatio String @default("9:16")
+  subtitleStyle Json?
+  coverSpec   Json?
+  score       Float?
+  metadata    Json?
+  createdAt   DateTime @default(now())
+  project     ContentProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  renders     RenderJob[]
+  posts       ScheduledPost[]
+}
+
+model RenderJob {
+  id          String @id @default(cuid())
+  sourceAssetId String
+  variantId   String?
+  status      JobStatus @default(QUEUED)
+  renderSpec  Json
+  outputKey   String?
+  attempts    Int @default(0)
+  error       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  sourceAsset MediaAsset @relation(fields: [sourceAssetId], references: [id], onDelete: Cascade)
+  variant     ContentVariant? @relation(fields: [variantId], references: [id])
+}
+
+model ScheduledPost {
+  id          String @id @default(cuid())
+  workspaceId String
+  projectId   String?
+  variantId   String?
+  title       String?
+  caption     String?
+  mediaUrl    String?
+  scheduledFor DateTime?
+  timezone    String @default("America/New_York")
+  status      PostStatus @default(DRAFT)
+  approvalRequired Boolean @default(false)
+  approvedAt  DateTime?
+  publishedAt DateTime?
+  failureReason String?
+  retryCount  Int @default(0)
+  metadata    Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  project     ContentProject? @relation(fields: [projectId], references: [id])
+  variant     ContentVariant? @relation(fields: [variantId], references: [id])
+  targets     PostTarget[]
+  @@index([workspaceId, status, scheduledFor])
+}
+
+model PostTarget {
+  id              String @id @default(cuid())
+  postId          String
+  socialAccountId String
+  providerPostId  String?
+  permalink       String?
+  status          PostStatus @default(DRAFT)
+  publishedAt     DateTime?
+  metrics         Json?
+  lastMetricsAt   DateTime?
+  error           String?
+  post            ScheduledPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  socialAccount   SocialAccount @relation(fields: [socialAccountId], references: [id], onDelete: Cascade)
+  @@unique([postId, socialAccountId])
+}
+
+model InboxItem {
+  id              String @id @default(cuid())
+  workspaceId     String
+  socialAccountId String?
+  providerItemId  String?
+  type            InboxType
+  authorName      String?
+  authorHandle    String?
+  body            String
+  sentiment       String?
+  priority        Int @default(0)
+  requiresReply   Boolean @default(false)
+  aiReplyDraft    String?
+  repliedAt       DateTime?
+  resolvedAt      DateTime?
+  receivedAt      DateTime @default(now())
+  metadata        Json?
+  workspace       Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  socialAccount   SocialAccount? @relation(fields: [socialAccountId], references: [id])
+  @@index([workspaceId, resolvedAt, priority])
+}
+
+model Notification {
+  id          String @id @default(cuid())
+  workspaceId String
+  type        NotificationType
+  title       String
+  body        String
+  actionUrl   String?
+  readAt      DateTime?
+  createdAt   DateTime @default(now())
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  @@index([workspaceId, readAt, createdAt])
+}
+
+model AuditLog {
+  id          String @id @default(cuid())
+  workspaceId String
+  actorUserId String?
+  action      String
+  entityType  String
+  entityId    String?
+  metadata    Json?
+  createdAt   DateTime @default(now())
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  @@index([workspaceId, createdAt])
+}
